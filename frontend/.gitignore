@@ -1,0 +1,54 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+!.env.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+
+.claude
+
+# Leftover hero animation frame sets from earlier design iterations - only
+# public/new1 (mobile) and public/good (desktop) are actually used by
+# CanvasSequence.tsx. These are unreferenced and just bloat the repo.
+/public/ezgif-1080-jpg
+/public/ezgif-16-png-split
+/public/ezgif-34893b12cc5e66cf-jpg
+/public/ezgif-3f78b1895cc757a8-png-split
+/public/ezgif-52a55568c02822b9-jpg.zip

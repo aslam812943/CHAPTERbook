@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  /* Warm amber/gold accent for price tags and primary CTA hover states -
+     used sparingly against the dark #111 / cream #F4F3EE editorial palette. */
+  --accent: #c9a227;
+  --accent-soft: #e7d6a1;
+  --paper: #f4f3ee;
+  --ink: #111111;
+  /* Dedicated "you're saving X%" color, kept separate from --accent so a
+     discount badge never has to compete for attention with the gold used
+     for price/CTA emphasis - green reads as a savings/deal signal. */
+  --sale: #1e7a45;
+
+  /* Warm honey/walnut wood tones - filter-pill accents and edge-fade
+     gradients on the shop page's horizontally-scrolling book rows. */
+  --wood-dark: #2f1c0d;
+  --wood-mid: #6b4226;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-sale: var(--sale);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-wood-dark: var(--wood-dark);
+  --color-wood-mid: var(--wood-mid);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-playfair);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+html {
+  overflow-x: hidden;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Hides the scrollbar track/thumb on an horizontally-scrollable element
+   while leaving it fully scrollable (drag, touch, arrow buttons still
+   work) - scrollbar-width covers Firefox, -ms-overflow-style covers old
+   Edge, and the ::-webkit-scrollbar rule covers Chrome/Safari, which
+   otherwise ignore scrollbar-width entirely. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* Continuously auto-scrolling showcase row (see LatestBooksMarquee) - the
+   track's content is duplicated by the component, and this animates
+   exactly one set-width (50% of the doubled track) to the left so the
+   loop point is seamless. Paused on hover so a card is actually clickable
+   instead of sliding out from under the cursor, and disabled entirely for
+   users who've asked for reduced motion. */
+@keyframes marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.marquee-track {
+  animation: marquee-scroll linear infinite;
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---- Library Shelf (shop page) ---- */
+
+/* Fallback book-spine fill for covers with no image - a subtle diagonal
+   sheen over a solid tone so it still reads as "a book," not a blank box. */
+.spine-fallback {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, transparent 35%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.12) 0%, transparent 20%);
+}
