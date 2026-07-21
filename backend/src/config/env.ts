@@ -20,6 +20,10 @@ const envSchema = z.object({
   // throws a clear error if someone actually tries to send without it set.
   GMAIL_USER: z.string().optional().default(""),
   GMAIL_APP_PASSWORD: z.string().optional().default(""),
+  // "Sign in with Google" - the OAuth Client ID from Google Cloud Console.
+  // Optional at parse time for the same reason as the Gmail vars above; the
+  // Google auth util throws a clear error if invoked without it set.
+  GOOGLE_CLIENT_ID: z.string().optional().default(""),
 });
 
 const parsed = envSchema.safeParse(process.env);

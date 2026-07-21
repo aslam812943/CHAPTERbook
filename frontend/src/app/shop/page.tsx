@@ -2,17 +2,29 @@ import { apiClient } from "@/lib/dal/apiClient";
 import { Book, PaginatedResult } from "@/types/book";
 import { Category } from "@/types/category";
 import { ReviewSummary } from "@/types/review";
+import { Author } from "@/types/author";
 import LibraryShelf from "@/components/shop/LibraryShelf";
 
-export default async function ShopPage() {
+export default async function ShopPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ author?: string }>;
+}) {
+  const { author: authorFilter } = await searchParams;
+
   // Filtering/sorting happens client-side in LibraryShelf so it can animate
   // books sliding on/off the shelves - that needs the full catalog in the
   // browser rather than a fresh server round-trip per filter change. Fine
   // at this catalog size; would need real pagination if it grows large.
-  const [{ items: books }, { categories }] = await Promise.all([
+  const [{ items: books }, { categories }, { authors }] = await Promise.all([
     apiClient.get<PaginatedResult<Book>>("/books?limit=100"),
     apiClient.get<{ categories: Category[] }>("/categories"),
+    apiClient.get<{ authors: Author[] }>("/authors"),
   ]);
+
+  const authorInfo = authorFilter
+    ? authors.find((a) => a.name.trim().toLowerCase() === authorFilter.trim().toLowerCase()) ?? null
+    : null;
 
   // One request per book is fine at this catalog size (a handful of
   // titles); would need a batch ratings endpoint if the catalog grows
@@ -32,5 +44,12 @@ export default async function ShopPage() {
     return { ...book, avgRating: summary.average, reviewCount: summary.total };
   });
 
-  return <LibraryShelf books={booksWithRatings} categories={categories} />;
+  return (
+    <LibraryShelf
+      books={booksWithRatings}
+      categories={categories}
+      authorFilter={authorFilter ?? null}
+      authorInfo={authorInfo}
+    />
+  );
 }

@@ -30,3 +30,23 @@ export async function loginAction(
   await setSessionCookies(response.tokens);
   redirect(response.user.role === "admin" ? "/admin" : "/");
 }
+
+export interface GoogleAuthState {
+  success: boolean;
+  message: string;
+}
+
+export async function googleLoginAction(idToken: string): Promise<GoogleAuthState> {
+  let response: AuthResponse;
+  try {
+    response = await apiClient.post<AuthResponse>("/auth/google", { idToken });
+  } catch (err) {
+    if (err instanceof ApiError) {
+      return { success: false, message: err.message };
+    }
+    return { success: false, message: "Something went wrong. Please try again." };
+  }
+
+  await setSessionCookies(response.tokens);
+  redirect(response.user.role === "admin" ? "/admin" : "/");
+}

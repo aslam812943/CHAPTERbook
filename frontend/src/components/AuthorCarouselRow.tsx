@@ -60,7 +60,7 @@ export default function AuthorCarouselRow({ authors }: { authors: Author[] }) {
         {authors.map((author) => (
           <Link
             key={author.id}
-            href="/shop"
+            href={`/shop?author=${encodeURIComponent(author.name)}`}
             className="group flex-shrink-0 w-24 sm:w-28 flex flex-col items-center text-center snap-start"
           >
             <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-md group-hover:shadow-lg transition-shadow">

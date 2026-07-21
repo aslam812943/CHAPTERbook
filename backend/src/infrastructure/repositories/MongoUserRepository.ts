@@ -9,6 +9,8 @@ function toDomain(doc: UserDocument): User {
     email: doc.email,
     passwordHash: doc.passwordHash,
     role: doc.role,
+    authProvider: doc.authProvider,
+    googleId: doc.googleId,
     addresses: doc.addresses.map((a: AddressSubdocument) => ({
       fullName: a.fullName,
       phone: a.phone,
@@ -31,6 +33,8 @@ export class MongoUserRepository implements IUserRepository {
       name: input.name,
       email: input.email,
       passwordHash: input.passwordHash,
+      authProvider: input.authProvider ?? "local",
+      googleId: input.googleId,
       role: input.role ?? "customer",
     });
     return toDomain(doc);
@@ -43,6 +47,16 @@ export class MongoUserRepository implements IUserRepository {
 
   async findByEmail(email: string): Promise<User | null> {
     const doc = await UserModel.findOne({ email: email.toLowerCase() });
+    return doc ? toDomain(doc) : null;
+  }
+
+  async findByGoogleId(googleId: string): Promise<User | null> {
+    const doc = await UserModel.findOne({ googleId });
+    return doc ? toDomain(doc) : null;
+  }
+
+  async linkGoogleAccount(userId: string, googleId: string): Promise<User | null> {
+    const doc = await UserModel.findByIdAndUpdate(userId, { googleId }, { new: true });
     return doc ? toDomain(doc) : null;
   }
 

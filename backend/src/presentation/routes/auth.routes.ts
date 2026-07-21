@@ -7,6 +7,7 @@ import { asyncHandler } from "../../shared/utils/asyncHandler";
 import {
   addressSchema,
   forgotPasswordSchema,
+  googleAuthSchema,
   loginSchema,
   refreshSchema,
   registerSchema,
@@ -19,6 +20,7 @@ export function buildAuthRouter(controller: AuthController): Router {
 
   router.post("/register", validate(registerSchema), asyncHandler(controller.register));
   router.post("/login", validate(loginSchema), asyncHandler(controller.login));
+  router.post("/google", validate(googleAuthSchema), asyncHandler(controller.googleLogin));
   router.post("/refresh", validate(refreshSchema), asyncHandler(controller.refresh));
   router.get("/me", authenticate, asyncHandler(controller.me));
   router.post("/me/addresses", authenticate, validate(addressSchema), asyncHandler(controller.addAddress));

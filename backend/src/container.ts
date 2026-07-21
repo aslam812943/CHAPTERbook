@@ -4,6 +4,7 @@ import { MongoBookRepository } from "./infrastructure/repositories/MongoBookRepo
 import { MongoCartRepository } from "./infrastructure/repositories/MongoCartRepository";
 import { MongoWishlistRepository } from "./infrastructure/repositories/MongoWishlistRepository";
 import { MongoReviewRepository } from "./infrastructure/repositories/MongoReviewRepository";
+import { MongoBookRequestRepository } from "./infrastructure/repositories/MongoBookRequestRepository";
 import { MongoOrderRepository } from "./infrastructure/repositories/MongoOrderRepository";
 import { MongoCategoryRepository } from "./infrastructure/repositories/MongoCategoryRepository";
 import { MongoAuthorRepository } from "./infrastructure/repositories/MongoAuthorRepository";
@@ -15,6 +16,7 @@ import { BookLookupService } from "./application/services/BookLookupService";
 import { CartService } from "./application/services/CartService";
 import { WishlistService } from "./application/services/WishlistService";
 import { ReviewService } from "./application/services/ReviewService";
+import { BookRequestService } from "./application/services/BookRequestService";
 import { OrderService } from "./application/services/OrderService";
 import { AdminOrderService } from "./application/services/AdminOrderService";
 import { CategoryService } from "./application/services/CategoryService";
@@ -25,6 +27,8 @@ import { BookLookupController } from "./presentation/controllers/BookLookupContr
 import { CartController } from "./presentation/controllers/CartController";
 import { WishlistController } from "./presentation/controllers/WishlistController";
 import { ReviewController } from "./presentation/controllers/ReviewController";
+import { BookRequestController } from "./presentation/controllers/BookRequestController";
+import { AdminBookRequestController } from "./presentation/controllers/AdminBookRequestController";
 import { OrderController } from "./presentation/controllers/OrderController";
 import { AdminOrderController } from "./presentation/controllers/AdminOrderController";
 import { CategoryController } from "./presentation/controllers/CategoryController";
@@ -35,6 +39,8 @@ import { buildBookLookupRouter } from "./presentation/routes/bookLookup.routes";
 import { buildCartRouter } from "./presentation/routes/cart.routes";
 import { buildWishlistRouter } from "./presentation/routes/wishlist.routes";
 import { buildReviewRouter } from "./presentation/routes/review.routes";
+import { buildBookRequestRouter } from "./presentation/routes/bookRequest.routes";
+import { buildAdminBookRequestRouter } from "./presentation/routes/adminBookRequest.routes";
 import { buildOrderRouter } from "./presentation/routes/order.routes";
 import { buildAdminOrderRouter } from "./presentation/routes/adminOrder.routes";
 import { buildCategoryRouter } from "./presentation/routes/category.routes";
@@ -50,6 +56,7 @@ function buildContainer() {
   const cartRepository = new MongoCartRepository();
   const wishlistRepository = new MongoWishlistRepository();
   const reviewRepository = new MongoReviewRepository();
+  const bookRequestRepository = new MongoBookRequestRepository();
   const orderRepository = new MongoOrderRepository();
   const categoryRepository = new MongoCategoryRepository();
   const authorRepository = new MongoAuthorRepository();
@@ -64,6 +71,7 @@ function buildContainer() {
   const cartService = new CartService(cartRepository, bookRepository);
   const wishlistService = new WishlistService(wishlistRepository, bookRepository);
   const reviewService = new ReviewService(reviewRepository, bookRepository, userRepository);
+  const bookRequestService = new BookRequestService(bookRequestRepository, userRepository, bookRepository);
   const orderService = new OrderService(orderRepository, cartRepository, cartService);
   const adminOrderService = new AdminOrderService(orderRepository);
   const categoryService = new CategoryService(categoryRepository);
@@ -74,6 +82,8 @@ function buildContainer() {
   const cartController = new CartController(cartService);
   const wishlistController = new WishlistController(wishlistService);
   const reviewController = new ReviewController(reviewService);
+  const bookRequestController = new BookRequestController(bookRequestService);
+  const adminBookRequestController = new AdminBookRequestController(bookRequestService);
   const orderController = new OrderController(orderService);
   const adminOrderController = new AdminOrderController(adminOrderService);
   const categoryController = new CategoryController(categoryService);
@@ -86,6 +96,8 @@ function buildContainer() {
     cartController,
     wishlistController,
     reviewController,
+    bookRequestController,
+    adminBookRequestController,
     orderController,
     adminOrderController,
     categoryController,
@@ -101,6 +113,8 @@ export function buildApiRouter(): Router {
     cartController,
     wishlistController,
     reviewController,
+    bookRequestController,
+    adminBookRequestController,
     orderController,
     adminOrderController,
     categoryController,
@@ -112,9 +126,11 @@ export function buildApiRouter(): Router {
   router.use("/books", buildBookRouter(bookController));
   router.use("/admin", buildBookLookupRouter(bookLookupController));
   router.use("/admin", buildAdminOrderRouter(adminOrderController));
+  router.use("/admin", buildAdminBookRequestRouter(adminBookRequestController));
   router.use("/cart", buildCartRouter(cartController));
   router.use("/wishlist", buildWishlistRouter(wishlistController));
   router.use("/reviews", buildReviewRouter(reviewController));
+  router.use("/book-requests", buildBookRequestRouter(bookRequestController));
   router.use("/orders", buildOrderRouter(orderController));
   router.use("/categories", buildCategoryRouter(categoryController));
   router.use("/authors", buildAuthorRouter(authorController));

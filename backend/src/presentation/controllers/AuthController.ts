@@ -17,6 +17,12 @@ export class AuthController {
     this.respondWithSession(res, user, tokens, 200);
   };
 
+  googleLogin = async (req: Request, res: Response): Promise<void> => {
+    const { idToken } = req.body;
+    const { user, tokens } = await this.authService.loginWithGoogle(idToken);
+    this.respondWithSession(res, user, tokens, 200);
+  };
+
   refresh = async (req: Request, res: Response): Promise<void> => {
     const refreshToken = req.body?.refreshToken;
     if (!refreshToken) {
