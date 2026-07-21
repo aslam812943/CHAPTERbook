@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
+import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
 import { loginAction, AuthFormState } from "./actions";
 
 const initialState: AuthFormState = { success: false, message: "" };
@@ -72,6 +73,8 @@ export default function LoginPage() {
 
           <SubmitButton />
         </form>
+
+        <GoogleSignInButton />
 
         <p className="text-gray-500 text-sm text-center mt-8">
           New here?{" "}

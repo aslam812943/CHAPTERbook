@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logoutAction } from "@/app/logout/actions";
+import { markBookRequestsSeenAction } from "@/app/request-book/actions";
 import type { SessionPayload } from "@/lib/dal/session";
+import type { BookRequest } from "@/types/bookRequest";
 import { useHeroVisibility } from "./HeroVisibilityContext";
 
 function HeaderIconLink({
@@ -40,14 +42,93 @@ function HeaderIconLink({
   );
 }
 
+function RequestBookNotification({
+  session,
+  unseenFulfilled,
+  panelClasses,
+  onRequireLogin,
+}: {
+  session: SessionPayload | null;
+  unseenFulfilled: BookRequest[];
+  panelClasses: string;
+  onRequireLogin: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [, startTransition] = useTransition();
+  const count = unseenFulfilled.length;
+
+  return (
+    <span className="relative inline-flex items-center">
+      <Link
+        href="/request-book"
+        className="hover:text-accent transition-colors"
+        onClick={(e) => {
+          if (!session) {
+            e.preventDefault();
+            onRequireLogin();
+          }
+        }}
+      >
+        Request a Book
+      </Link>
+
+      {session && count > 0 && (
+        <button
+          type="button"
+          aria-label={`${count} fulfilled book request${count === 1 ? "" : "s"}`}
+          onClick={() => {
+            const next = !open;
+            setOpen(next);
+            if (next) {
+              startTransition(() => {
+                markBookRequestsSeenAction();
+              });
+            }
+          }}
+          className="ml-1 min-w-[16px] h-4 px-1 rounded-full bg-accent text-[10px] font-semibold text-ink flex items-center justify-center leading-none hover:brightness-110 transition-all"
+        >
+          {count > 99 ? "99+" : count}
+        </button>
+      )}
+
+      {open && (
+        <div
+          className={`absolute top-full right-0 mt-2 w-64 rounded-xl border shadow-xl z-20 overflow-hidden text-sm normal-case ${panelClasses}`}
+        >
+          <div className="px-4 py-3 border-b border-current/10 font-semibold">Fulfilled Requests</div>
+          <div className="max-h-64 overflow-y-auto">
+            {unseenFulfilled.map((req) => (
+              <div key={req.id} className="px-4 py-3 border-b border-current/10 last:border-b-0">
+                <p className="font-medium">{req.bookTitle}</p>
+                {req.bookId ? (
+                  <Link href={`/books/${req.bookId}`} className="text-xs text-accent hover:underline">
+                    View Book &rarr;
+                  </Link>
+                ) : (
+                  <p className="text-xs opacity-60">Now available in our catalog</p>
+                )}
+              </div>
+            ))}
+          </div>
+          <Link href="/request-book" className="block px-4 py-2 text-xs text-center text-accent hover:underline">
+            See all requests &rarr;
+          </Link>
+        </div>
+      )}
+    </span>
+  );
+}
+
 export default function HeaderBar({
   session,
   cartCount,
   wishlistCount,
+  unseenFulfilled,
 }: {
   session: SessionPayload | null;
   cartCount: number;
   wishlistCount: number;
+  unseenFulfilled: BookRequest[];
 }) {
   const pathname = usePathname();
   const isAdminSide = pathname?.startsWith("/admin");
@@ -115,7 +196,16 @@ export default function HeaderBar({
           <Link href="/shop" className="hover:text-accent transition-colors">
             All Books
           </Link>
-         
+          <RequestBookNotification
+            key={pathname}
+            session={session}
+            unseenFulfilled={unseenFulfilled}
+            panelClasses={panelClasses}
+            onRequireLogin={() => {
+              setToast({ message: "Please login to request a book", visible: true });
+              setTimeout(() => setToast((prev) => ({ ...prev, visible: false })), 3000);
+            }}
+          />
         </>
       )}
 

@@ -1,5 +1,5 @@
 import { Schema, model, Document, Types } from "mongoose";
-import { UserRole } from "../../../domain/entities/User";
+import { AuthProvider, UserRole } from "../../../domain/entities/User";
 
 export interface AddressSubdocument {
   fullName: string;
@@ -13,8 +13,10 @@ export interface AddressSubdocument {
 export interface UserDocument extends Document<Types.ObjectId> {
   name: string;
   email: string;
-  passwordHash: string;
+  passwordHash?: string;
   role: UserRole;
+  authProvider: AuthProvider;
+  googleId?: string;
   addresses: AddressSubdocument[];
   resetCodeHash?: string;
   resetCodeExpiresAt?: Date;
@@ -39,8 +41,18 @@ const userSchema = new Schema<UserDocument>(
   {
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    passwordHash: { type: String, required: true },
+    // Required for local accounts only - Google-only accounts never get one.
+    passwordHash: {
+      type: String,
+      required: function (this: { authProvider?: AuthProvider }) {
+        return this.authProvider !== "google";
+      },
+    },
     role: { type: String, enum: ["customer", "admin"], default: "customer" },
+    authProvider: { type: String, enum: ["local", "google"], default: "local" },
+    // sparse: a unique index that ignores documents where the field is
+    // absent, so local accounts (no googleId) don't collide with each other.
+    googleId: { type: String, unique: true, sparse: true },
     addresses: { type: [addressSchema], default: [] },
     resetCodeHash: { type: String },
     resetCodeExpiresAt: { type: Date },

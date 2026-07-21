@@ -9,12 +9,18 @@ export interface Address {
   country: string;
 }
 
+export type AuthProvider = "local" | "google";
+
 export interface User {
   id: string;
   name: string;
   email: string;
-  passwordHash: string;
+  // Absent for Google-only accounts - never a placeholder/empty string, so
+  // "has a password" is always a genuine presence check.
+  passwordHash?: string;
   role: UserRole;
+  authProvider: AuthProvider;
+  googleId?: string;
   addresses: Address[];
   // Password reset - a hashed, single-use, short-expiry code (never the
   // plain code) plus when it stops being valid. Cleared once used.
@@ -32,6 +38,10 @@ export interface User {
 export interface CreateUserInput {
   name: string;
   email: string;
-  passwordHash: string;
+  // Exactly one of these two should be set: passwordHash for a normal
+  // signup, googleId for a Google-only account.
+  passwordHash?: string;
+  authProvider?: AuthProvider;
+  googleId?: string;
   role?: UserRole;
 }

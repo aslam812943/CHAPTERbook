@@ -3,6 +3,7 @@ import { Address, User, UserRole } from "../../domain/entities/User";
 import { PasswordHasher } from "../../shared/utils/password";
 import { JwtPayload, TokenService } from "../../shared/utils/jwt";
 import { sendPasswordResetEmail } from "../../shared/utils/mailer";
+import { verifyGoogleIdToken } from "../../shared/utils/googleAuth";
 import { ConflictError, UnauthorizedError } from "../../shared/errors/AppError";
 
 const RESET_CODE_TTL_MS = 15 * 60 * 1000;
@@ -51,13 +52,49 @@ export class AuthService {
 
   async login(email: string, password: string): Promise<{ user: SafeUser; tokens: AuthTokens }> {
     const user = await this.userRepository.findByEmail(email);
-    if (!user) {
+    if (!user || !user.passwordHash) {
+      // No account, or a Google-only account with no password to check
+      // against - same generic message either way so this can't be used
+      // to probe which emails exist or how they signed up.
       throw new UnauthorizedError("Invalid email or password");
     }
 
     const valid = await PasswordHasher.compare(password, user.passwordHash);
     if (!valid) {
       throw new UnauthorizedError("Invalid email or password");
+    }
+
+    return { user: toSafeUser(user), tokens: this.issueTokens(user) };
+  }
+
+  async loginWithGoogle(idToken: string): Promise<{ user: SafeUser; tokens: AuthTokens }> {
+    const profile = await verifyGoogleIdToken(idToken);
+    if (!profile.emailVerified) {
+      throw new UnauthorizedError("Google account email is not verified");
+    }
+
+    let user = await this.userRepository.findByGoogleId(profile.googleId);
+
+    if (!user) {
+      const existingByEmail = await this.userRepository.findByEmail(profile.email);
+      if (existingByEmail) {
+        // Same email already has a password-based account - link this
+        // Google identity to it instead of creating a duplicate, so either
+        // sign-in method works going forward.
+        user = await this.userRepository.linkGoogleAccount(existingByEmail.id, profile.googleId);
+      } else {
+        user = await this.userRepository.create({
+          name: profile.name,
+          email: profile.email,
+          authProvider: "google",
+          googleId: profile.googleId,
+          role: "customer",
+        });
+      }
+    }
+
+    if (!user) {
+      throw new UnauthorizedError("Could not sign in with Google");
     }
 
     return { user: toSafeUser(user), tokens: this.issueTokens(user) };

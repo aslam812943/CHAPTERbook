@@ -3,8 +3,10 @@
 import { useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { Book } from "@/types/book";
 import { Category } from "@/types/category";
+import { Author } from "@/types/author";
 import ShelfRow from "./ShelfRow";
 import BookSpine from "./BookSpine";
 
@@ -16,12 +18,28 @@ interface ShelfGroup {
   books: Book[];
 }
 
-export default function LibraryShelf({ books, categories }: { books: Book[]; categories: Category[] }) {
+export default function LibraryShelf({
+  books,
+  categories,
+  authorFilter = null,
+  authorInfo = null,
+}: {
+  books: Book[];
+  categories: Category[];
+  authorFilter?: string | null;
+  authorInfo?: Author | null;
+}) {
   const [search, setSearch] = useState("");
   const [language, setLanguage] = useState<string | null>(null);
   const [sort, setSort] = useState<SortOption>("newest");
   const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
   const filterBarRef = useRef<HTMLDivElement>(null);
+
+  const authorBooks = useMemo(() => {
+    if (!authorFilter) return [];
+    const q = authorFilter.trim().toLowerCase();
+    return books.filter((book) => book.authors.some((a) => a.trim().toLowerCase() === q));
+  }, [books, authorFilter]);
 
   const languages = useMemo(() => {
     const set = new Set(books.map((b) => b.language).filter(Boolean));
@@ -193,12 +211,50 @@ export default function LibraryShelf({ books, categories }: { books: Book[]; cat
         </div>
 
         <p className="text-sm text-gray-500 mb-8">
-          {expandedCategoryId && !expandedShelf 
-            ? "0 books found" 
+          {authorFilter
+            ? `${authorBooks.length} book${authorBooks.length === 1 ? "" : "s"} found`
+            : expandedCategoryId && !expandedShelf
+            ? "0 books found"
             : `${filteredBooks.length} book${filteredBooks.length === 1 ? "" : "s"} found`}
         </p>
 
-        {expandedCategoryId ? (
+        {authorFilter ? (
+          <div>
+            <Link
+              href="/shop"
+              className="text-sm text-accent hover:underline mb-6 inline-flex items-center gap-1"
+            >
+              &larr; All Books
+            </Link>
+
+            <div className="flex items-center gap-4 mb-8">
+              <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-md flex-shrink-0">
+                {authorInfo?.imageUrl ? (
+                  <Image src={authorInfo.imageUrl} alt={authorInfo.name} fill className="object-cover" unoptimized />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-2xl font-serif italic text-gray-300">
+                    {(authorInfo?.name ?? authorFilter).slice(0, 1)}
+                  </div>
+                )}
+              </div>
+              <h2 className="font-serif italic text-2xl sm:text-3xl text-ink">
+                {authorInfo?.name ?? authorFilter}
+              </h2>
+            </div>
+
+            {authorBooks.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6">
+                {authorBooks.map((book) => (
+                  <BookSpine key={book.id} book={book} />
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white border border-gray-200 rounded-xl p-16 text-center text-gray-500">
+                No books found by {authorInfo?.name ?? authorFilter} yet.
+              </div>
+            )}
+          </div>
+        ) : expandedCategoryId ? (
           <div>
             <button
               type="button"
@@ -224,7 +280,13 @@ export default function LibraryShelf({ books, categories }: { books: Book[]; cat
           </div>
         ) : shelves.length === 0 ? (
           <div className="bg-white border border-gray-200 rounded-xl p-16 text-center text-gray-500">
-            No books match your search. Try a different title, author, or language.
+            <p>No books match your search. Try a different title, author, or language.</p>
+            <Link
+              href={`/request-book${search.trim() ? `?title=${encodeURIComponent(search.trim())}` : ""}`}
+              className="inline-block mt-4 text-accent hover:underline"
+            >
+              Can&apos;t find it? Request this book &rarr;
+            </Link>
           </div>
         ) : (
           <div className="space-y-14">
