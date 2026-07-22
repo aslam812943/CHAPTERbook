@@ -13,10 +13,15 @@ export function createApp(): Express {
   // IP from X-Forwarded-For and throws in production. Harmless locally.
   app.set("trust proxy", 1);
 
+  // CORS_ORIGIN may be a single origin or a comma-separated list (e.g. the
+  // apex domain plus its www/vercel.app alias) - split so a single deployed
+  // frontend can still be reached under more than one hostname.
+  const allowedOrigins = env.CORS_ORIGIN.split(",").map((origin) => origin.trim());
+
   app.use(helmet());
   app.use(
     cors({
-      origin: env.CORS_ORIGIN,
+      origin: allowedOrigins,
       credentials: true,
     })
   );
