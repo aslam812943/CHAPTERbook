@@ -16,11 +16,13 @@ gsap.registerPlugin(ScrollTrigger);
 ScrollTrigger.config({ ignoreMobileResize: true });
 
 // Separate frame sets per device - phones get a lighter, portrait-oriented
-// set (11MB / 201 frames) instead of the desktop landscape set (270 frames),
-// which is both heavier and awkwardly cropped on a tall narrow viewport.
+// set (~7MB / 262 WebP frames) instead of the desktop landscape set (~12MB /
+// 270 frames), which is both heavier and awkwardly cropped on a tall narrow
+// viewport. Frames are WebP (q75) rather than the original raw PNGs, which
+// were 188MB/122MB respectively and made first load take minutes.
 const FRAME_SETS = {
-  mobile: { folder: 'new1', count: 262, extension: 'png' },
-  desktop: { folder: 'good', count: 255, extension: 'png' },
+  mobile: { folder: 'new1', count: 262, extension: 'webp' },
+  desktop: { folder: 'good', count: 255, extension: 'webp' },
 } as const;
 
 function getInitialMatch(query: string): boolean {
@@ -32,6 +34,9 @@ export default function CanvasSequence() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
+  // Safety net, distinct from reducedMotion (an accessibility preference) -
+  // this just means the load gave up, not that the user asked for less motion.
+  const [loadTimedOut, setLoadTimedOut] = useState(false);
   // Read synchronously on first render instead of defaulting to false and
   // correcting in an effect - otherwise a phone briefly starts the desktop
   // (unskipped, full-resolution) frame load before the mobile branch takes
@@ -88,6 +93,16 @@ export default function CanvasSequence() {
     }
 
     let cancelled = false;
+    setLoadTimedOut(false);
+
+    // Safety net for slow/throttled connections: a real visitor should never
+    // be scroll-locked behind the loader indefinitely - give up after 5s and
+    // fall back to the same static hero reduced-motion users already get.
+    const timeoutId = window.setTimeout(() => {
+      if (cancelled) return;
+      cancelled = true;
+      setLoadTimedOut(true);
+    }, 5000);
 
     const loadImages = async () => {
       // No frame-skipping needed anymore - the mobile set is already sized
@@ -130,6 +145,7 @@ export default function CanvasSequence() {
 
       if (cancelled) return;
       imagesRef.current = images;
+      window.clearTimeout(timeoutId);
       setIsLoaded(true);
     };
 
@@ -137,6 +153,7 @@ export default function CanvasSequence() {
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timeoutId);
     };
   }, [reducedMotion, isMobile]);
 
@@ -145,7 +162,7 @@ export default function CanvasSequence() {
   // into - otherwise a scroll during the load window skips straight past
   // the hero into the rest of the page before GSAP has even registered it.
   useEffect(() => {
-    if (reducedMotion || isLoaded) return;
+    if (reducedMotion || isLoaded || loadTimedOut) return;
 
     const { overflow: htmlOverflow } = document.documentElement.style;
     const { overflow: bodyOverflow } = document.body.style;
@@ -156,7 +173,7 @@ export default function CanvasSequence() {
       document.documentElement.style.overflow = htmlOverflow;
       document.body.style.overflow = bodyOverflow;
     };
-  }, [isLoaded, reducedMotion]);
+  }, [isLoaded, reducedMotion, loadTimedOut]);
 
   useEffect(() => {
     if (!isLoaded || reducedMotion || !canvasRef.current || !containerRef.current) return;
@@ -311,7 +328,7 @@ export default function CanvasSequence() {
     return () => observer.disconnect();
   }, [setHeroDark]);
 
-  if (reducedMotion) {
+  if (reducedMotion || loadTimedOut) {
     return (
       <div className="w-full h-screen relative flex items-center mt-10 justify-center bg-[#F4F3EE]">
         <Image
