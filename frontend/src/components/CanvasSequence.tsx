@@ -6,6 +6,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import AnimatedText from './AnimatedText';
 import { useHeroVisibility } from './layout/HeroVisibilityContext';
+import { smoothScrollTo } from '@/lib/smoothScrollTo';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -48,6 +49,7 @@ export default function CanvasSequence() {
 
   const imagesRef = useRef<HTMLImageElement[]>([]);
   const currentFrame = useRef(0);
+  const scrollTriggerRef = useRef<ScrollTrigger | null>(null);
   const endTextShownRef = useRef(false);
 
   const { setHeaderVisible, setHeroDark } = useHeroVisibility();
@@ -102,7 +104,7 @@ export default function CanvasSequence() {
       if (cancelled) return;
       cancelled = true;
       setLoadTimedOut(true);
-    }, 5000);
+    }, 8000);
 
     const loadImages = async () => {
       // No frame-skipping needed anymore - the mobile set is already sized
@@ -281,6 +283,8 @@ export default function CanvasSequence() {
       }
     });
 
+    scrollTriggerRef.current = tl.scrollTrigger ?? null;
+
     // Force GSAP to recalculate every ScrollTrigger's position now that this
     // pin's spacer has been added asynchronously (after image loading), which
     // pushes every section below it further down the document. Any other
@@ -303,11 +307,22 @@ export default function CanvasSequence() {
       window.removeEventListener('resize', handleResize);
       tl.kill();
       ScrollTrigger.getAll().forEach(t => t.kill());
+      scrollTriggerRef.current = null;
       endTextShownRef.current = false;
       setShowEndText(false);
       setHeroDark(false);
     };
   }, [isLoaded, reducedMotion]);
+
+  // "Skip" control for the pinned scroll sequence - jumps straight to the
+  // scroll position where the pin releases (GSAP's own `end`, which already
+  // accounts for the pin spacer) instead of making impatient visitors scroll
+  // through ~250 frames by hand to reach the rest of the page.
+  const handleSkipToEnd = () => {
+    const trigger = scrollTriggerRef.current;
+    if (!trigger) return;
+    smoothScrollTo(trigger.end);
+  };
 
   // The GSAP timeline's onUpdate above only fires while this section is
   // actively pinned/scrubbing - once the pin releases and the hero scrolls
@@ -366,6 +381,19 @@ export default function CanvasSequence() {
         ref={canvasRef}
         className="absolute top-0 left-0 w-full h-full object-cover"
       />
+      {isLoaded && !showEndText && (
+        <button
+          type="button"
+          onClick={handleSkipToEnd}
+          aria-label="Skip to end of intro animation"
+          className="absolute bottom-6 sm:bottom-10 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1 text-white/90 hover:text-white transition-colors animate-bounce"
+        >
+          <span className="text-xs sm:text-sm font-medium drop-shadow-md tracking-wide">Scroll</span>
+          <svg viewBox="0 0 24 24" className="w-6 h-6 sm:w-8 sm:h-8 drop-shadow-md" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      )}
       {showEndText && (
         <div className="absolute inset-0 top-16 left-4 right-4 md:top-30 md:left-30 md:right-25 pointer-events-none flex flex-col px-6 sm:px-12 md:px-20 pb-6 pt-4 md:pb-12 md:pt-8">
           <div className="flex-1 flex flex-col items-start justify-center">

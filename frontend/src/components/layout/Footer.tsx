@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { smoothScrollTo } from "@/lib/smoothScrollTo";
 
 const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "";
 const WHATSAPP_HREF = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
@@ -178,7 +179,7 @@ export default function Footer() {
 
         <button
           type="button"
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          onClick={() => smoothScrollTo(0)}
           aria-label="Back to top"
           className={`w-12 h-12 flex items-center justify-center rounded-full bg-ink text-paper shadow-lg hover:bg-accent hover:text-ink transition-all duration-300 ${
             showTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3 pointer-events-none"
