@@ -22,12 +22,12 @@ export default function BookRequestStatusActions({ id, books }: { id: string; bo
   }
 
   return (
-    <div className="flex flex-col items-end gap-1">
-      <div className="flex items-center gap-2">
+    <div className="flex flex-col items-start sm:items-end gap-1 w-full sm:w-auto">
+      <div className="flex items-center flex-wrap gap-2 w-full sm:w-auto">
         <select
           value={selectedBookId}
           onChange={(e) => setSelectedBookId(e.target.value)}
-          className="bg-[#111] border border-gray-700 rounded-md py-1.5 px-2 text-white text-xs focus:outline-none focus:ring-2 focus:ring-accent/60 max-w-[160px]"
+          className="bg-[#111] border border-gray-700 rounded-md py-1.5 px-2 text-white text-xs focus:outline-none focus:ring-2 focus:ring-accent/60 w-full sm:w-auto sm:max-w-[160px]"
         >
           <option value="">No specific book</option>
           {books.map((book) => (

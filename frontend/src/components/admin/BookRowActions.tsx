@@ -20,7 +20,7 @@ export default function BookRowActions({ bookId, stock }: { bookId: string; stoc
   }
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center flex-wrap gap-3">
       <form action={formAction} className="flex items-center gap-2">
         <input type="hidden" name="id" value={bookId} />
         <input

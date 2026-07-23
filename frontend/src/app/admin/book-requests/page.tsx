@@ -20,11 +20,11 @@ export default async function AdminBookRequestsPage() {
   ]);
 
   return (
-    <div className="min-h-screen bg-[#111] text-[#F4F3EE] py-24 px-8">
+    <div className="min-h-screen bg-[#111] text-[#F4F3EE] py-12 px-4 md:py-24 md:px-8">
       <div className="max-w-5xl mx-auto">
-        <div className="mb-10 flex items-center justify-between">
+        <div className="mb-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-serif italic mb-2">Book Requests</h1>
+            <h1 className="text-3xl sm:text-4xl font-serif italic mb-2">Book Requests</h1>
             <p className="text-gray-400">
               {bookRequests.length} title{bookRequests.length === 1 ? "" : "s"} readers have asked for
             </p>
@@ -41,18 +41,18 @@ export default async function AdminBookRequestsPage() {
         ) : (
           <div className="space-y-4">
             {bookRequests.map((req) => (
-              <div key={req.id} className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
+              <div key={req.id} className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                  <div className="min-w-0 break-words">
                     <p className="font-semibold text-[#F4F3EE]">{req.bookTitle}</p>
                     {req.authorName && <p className="text-sm text-gray-400">by {req.authorName}</p>}
                     {req.note && <p className="text-sm text-gray-400 mt-1">{req.note}</p>}
-                    <p className="text-xs text-gray-500 mt-2">
+                    <p className="text-xs text-gray-500 mt-2 break-all sm:break-normal">
                       Requested by {req.requesterName} ({req.requesterEmail}) on{" "}
                       {new Date(req.createdAt).toLocaleDateString()}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
+                  <div className="flex items-center flex-wrap gap-3 sm:flex-shrink-0">
                     <span
                       className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${STATUS_COLORS[req.status]}`}
                     >

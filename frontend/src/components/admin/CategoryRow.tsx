@@ -91,19 +91,19 @@ export default function CategoryRow({ category }: { category: Category }) {
   }
 
   return (
-    <div className="flex items-center justify-between p-4">
-      <div className="flex items-center gap-3">
+    <div className="flex items-center flex-wrap justify-between gap-3 p-4">
+      <div className="flex items-center gap-3 min-w-0">
         <div className="relative w-10 h-10 rounded overflow-hidden bg-[#111] border border-gray-800 flex-shrink-0">
           {category.imageUrl && (
             <Image src={category.imageUrl} alt={category.name} fill className="object-cover" unoptimized />
           )}
         </div>
-        <div>
-          <p className="font-medium text-[#F4F3EE]">{category.name}</p>
-          <p className="text-xs text-gray-500">{category.slug}</p>
+        <div className="min-w-0">
+          <p className="font-medium text-[#F4F3EE] truncate">{category.name}</p>
+          <p className="text-xs text-gray-500 truncate">{category.slug}</p>
         </div>
       </div>
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-shrink-0">
         <button
           type="button"
           onClick={startEditing}

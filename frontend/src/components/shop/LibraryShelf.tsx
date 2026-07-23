@@ -91,7 +91,7 @@ export default function LibraryShelf({
   return (
     <div className="min-h-screen bg-white pt-20">
       {/* Hero - "Discover Books You'll Love" copy is baked into the image itself */}
-      <div className="relative w-full h-[200px] sm:h-[250px] md:h-[300px]">
+      <div className="relative w-full h-[260px] sm:h-[250px] md:h-[300px]">
         <Image
           src="/hero.png"
           alt="Discover Books You'll Love - explore thousands of handpicked books across every genre"
@@ -99,10 +99,10 @@ export default function LibraryShelf({
           priority
           className="object-cover object-left sm:object-center"
         />
-        <div className="absolute sm:pl-10 inset-0 flex flex-col justify-end pb-8 sm:pb-12">
+        <div className="absolute sm:pl-10 inset-0 flex flex-col justify-end pb-4 sm:pb-12">
           <div className="max-w-6xl mx-auto w-full px-4 sm:px-8">
-            <div className="mb-4 sm:pl-20 sm:mb-6">
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif font-bold text-black mb-2 leading-tight">
+            <div className="mb-3 sm:pl-20 sm:mb-6">
+              <h1 className="text-2xl sm:text-4xl md:text-5xl font-serif font-bold text-black mb-2 leading-tight">
                 Discover <br className="hidden sm:block" />
                 <span className="text-[#B8860B]">Books You'll Love</span>
               </h1>

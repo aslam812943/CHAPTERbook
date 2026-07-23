@@ -91,19 +91,19 @@ export default function AuthorRow({ author }: { author: Author }) {
   }
 
   return (
-    <div className="flex items-center justify-between p-4">
-      <div className="flex items-center gap-3">
+    <div className="flex items-center flex-wrap justify-between gap-3 p-4">
+      <div className="flex items-center gap-3 min-w-0">
         <div className="relative w-10 h-10 rounded-full overflow-hidden bg-[#111] border border-gray-800 flex-shrink-0">
           {author.imageUrl && (
             <Image src={author.imageUrl} alt={author.name} fill className="object-cover" unoptimized />
           )}
         </div>
-        <div>
-          <p className="font-medium text-[#F4F3EE]">{author.name}</p>
-          <p className="text-xs text-gray-500">{author.slug}</p>
+        <div className="min-w-0">
+          <p className="font-medium text-[#F4F3EE] truncate">{author.name}</p>
+          <p className="text-xs text-gray-500 truncate">{author.slug}</p>
         </div>
       </div>
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-shrink-0">
         <button
           type="button"
           onClick={startEditing}

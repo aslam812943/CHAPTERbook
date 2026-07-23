@@ -179,7 +179,7 @@ export default function BookImportPanel({ categories }: { categories: Category[]
 
   return (
     <div className="space-y-8">
-      <form onSubmit={handleSearch} className="flex gap-3">
+      <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
         <input
           type="text"
           value={query}
@@ -190,12 +190,12 @@ export default function BookImportPanel({ categories }: { categories: Category[]
         <button
           type="submit"
           disabled={isSearching || query.trim().length < 2}
-          className="bg-[#F4F3EE] text-[#111] font-semibold px-6 rounded-md hover:bg-white transition-colors disabled:opacity-50"
+          className="bg-[#F4F3EE] text-[#111] font-semibold px-6 py-3 sm:py-0 rounded-md hover:bg-white transition-colors disabled:opacity-50"
         >
           {isSearching ? "Searching..." : "Search"}
         </button>
       </form>
-      <p className="-mt-6 text-xs text-gray-500">
+      <p className="sm:-mt-6 text-xs text-gray-500">
         Search the exact title only - skip extra words like a language name or edition (e.g. use{" "}
         <span className="text-gray-400">Azadi</span>, not{" "}
         <span className="text-gray-400">Azadi - Malayalam</span>). Results are merged from Google Books and Open
@@ -245,9 +245,9 @@ export default function BookImportPanel({ categories }: { categories: Category[]
       )}
 
       {selected && (
-        <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-semibold text-[#F4F3EE]">
+        <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-4 sm:p-8">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+            <h2 className="text-xl sm:text-2xl font-semibold text-[#F4F3EE]">
               {selected.source === "manual" ? "Add Book Manually" : "Review & Save"}
             </h2>
             <button

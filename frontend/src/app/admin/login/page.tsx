@@ -51,7 +51,7 @@ export default function AdminLoginPage() {
               type="email"
               id="email"
               name="email"
-              defaultValue="admin@gmail.com"
+              
               required
               className="w-full bg-[#111] border border-gray-700 rounded-md py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-accent/60 focus:border-transparent transition-all"
               placeholder="admin@example.com"
@@ -66,7 +66,7 @@ export default function AdminLoginPage() {
               type="password"
               id="password"
               name="password"
-              defaultValue="AdminPass123!"
+              
               required
               className="w-full bg-[#111] border border-gray-700 rounded-md py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-accent/60 focus:border-transparent transition-all"
               placeholder="••••••••"

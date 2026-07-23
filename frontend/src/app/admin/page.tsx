@@ -14,17 +14,17 @@ export default async function AdminPage() {
   const session = await requireAdmin();
 
   return (
-    <div className="min-h-screen bg-[#111] text-[#F4F3EE] py-24 px-8 relative overflow-hidden">
+    <div className="min-h-screen bg-[#111] text-[#F4F3EE] py-12 px-4 md:py-24 md:px-8 relative overflow-hidden">
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-20">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gray-600 rounded-full mix-blend-screen filter blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gray-700 rounded-full mix-blend-screen filter blur-3xl" />
       </div>
 
       <div className="relative z-10 max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-12 border-b border-gray-800 pb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-12 border-b border-gray-800 pb-6">
           <div>
-            <h1 className="text-4xl md:text-5xl font-serif italic mb-2">Library Administration</h1>
-            <p className="text-gray-400 text-lg">Signed in as {session.email}</p>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif italic mb-2">Library Administration</h1>
+            <p className="text-gray-400 text-base sm:text-lg break-all sm:break-normal">Signed in as {session.email}</p>
           </div>
           <form action={logoutAction}>
             <button

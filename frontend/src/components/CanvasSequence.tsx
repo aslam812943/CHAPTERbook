@@ -26,6 +26,13 @@ const FRAME_SETS = {
   desktop: { folder: 'good', count: 255, extension: 'webp' },
 } as const;
 
+// Module-scope, not component state - persists across client-side
+// navigations away from and back to "/" within the same page session (a
+// full page reload still starts empty). Without this, revisiting the
+// homepage re-ran the entire ~250-frame load and progress bar every time,
+// even though the browser's own HTTP cache already had the files.
+const frameCache: Partial<Record<keyof typeof FRAME_SETS, HTMLImageElement[]>> = {};
+
 function getInitialMatch(query: string): boolean {
   return typeof window !== 'undefined' && window.matchMedia(query).matches;
 }
@@ -94,17 +101,28 @@ export default function CanvasSequence() {
       return;
     }
 
+    const cacheKey = isMobile ? 'mobile' : 'desktop';
+    const cached = frameCache[cacheKey];
+    if (cached && cached.length === frameSet.count) {
+      imagesRef.current = cached;
+      setIsLoaded(true);
+      return;
+    }
+
     let cancelled = false;
     setLoadTimedOut(false);
 
     // Safety net for slow/throttled connections: a real visitor should never
-    // be scroll-locked behind the loader indefinitely - give up after 5s and
+    // be scroll-locked behind the loader indefinitely - give up after 20s and
     // fall back to the same static hero reduced-motion users already get.
+    // Generous on purpose: this only exists to bound a genuinely broken
+    // connection, not to interrupt a normal (even somewhat slow) load that's
+    // still actively making progress.
     const timeoutId = window.setTimeout(() => {
       if (cancelled) return;
       cancelled = true;
       setLoadTimedOut(true);
-    }, 8000);
+    }, 20000);
 
     const loadImages = async () => {
       // No frame-skipping needed anymore - the mobile set is already sized
@@ -147,6 +165,7 @@ export default function CanvasSequence() {
 
       if (cancelled) return;
       imagesRef.current = images;
+      frameCache[cacheKey] = images;
       window.clearTimeout(timeoutId);
       setIsLoaded(true);
     };
@@ -347,7 +366,7 @@ export default function CanvasSequence() {
     return (
       <div className="w-full h-screen relative flex items-center mt-10 justify-center bg-[#F4F3EE]">
         <Image
-          src={`/${frameSet.folder}/ezgif-frame-${String(frameSet.count).padStart(3, '0')}.${frameSet.extension}`}
+          src="/hero.png"
           alt="Library"
           fill
           priority
@@ -395,7 +414,7 @@ export default function CanvasSequence() {
         </button>
       )}
       {showEndText && (
-        <div className="absolute inset-0 top-16 left-4 right-4 md:top-30 md:left-30 md:right-25 pointer-events-none flex flex-col px-6 sm:px-12 md:px-20 pb-6 pt-4 md:pb-12 md:pt-8">
+        <div className="absolute inset-0 top-16 left-4 right-4 md:top-30 md:left-30 md:right-25 pointer-events-none flex flex-col px-6 sm:px-12 md:px-20 pb-32 pt-4 md:pb-12 md:pt-8">
           <div className="flex-1 flex flex-col items-start justify-center">
             <p className="text-white/90 text-base sm:text-lg md:text-xl font-light mb-2 drop-shadow-md">
               <AnimatedText text="Welcome to" />

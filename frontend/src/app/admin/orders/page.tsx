@@ -22,11 +22,11 @@ export default async function AdminOrdersPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#111] text-[#F4F3EE] py-24 px-8">
+    <div className="min-h-screen bg-[#111] text-[#F4F3EE] py-12 px-4 md:py-24 md:px-8">
       <div className="max-w-5xl mx-auto">
-        <div className="mb-10 flex items-center justify-between">
+        <div className="mb-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-serif italic mb-2">Orders</h1>
+            <h1 className="text-3xl sm:text-4xl font-serif italic mb-2">Orders</h1>
             <p className="text-gray-400">{total} order{total === 1 ? "" : "s"} placed via WhatsApp checkout</p>
           </div>
           <Link href="/admin" className="text-sm text-gray-400 hover:text-accent transition-colors">
@@ -41,13 +41,13 @@ export default async function AdminOrdersPage() {
         ) : (
           <div className="space-y-4">
             {orders.map((order) => (
-              <div key={order.id} className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-6">
-                <div className="flex items-start justify-between mb-4">
+              <div key={order.id} className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-4 sm:p-6">
+                <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                   <div>
                     <p className="font-semibold text-[#F4F3EE]">{order.orderRef}</p>
                     <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleString()}</p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center flex-wrap gap-3">
                     <span
                       className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[order.status]}`}
                     >
