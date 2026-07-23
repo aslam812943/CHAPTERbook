@@ -185,14 +185,13 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
   const containerRef = useRef<HTMLDivElement>(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
-  // Safety net, distinct from reducedMotion (an accessibility preference) -
-  // this just means the load gave up, not that the user asked for less motion.
+  // Safety net for a genuinely stalled/broken load - not tied to any
+  // accessibility preference, just "the load gave up."
   const [loadTimedOut, setLoadTimedOut] = useState(false);
   // Read synchronously on first render instead of defaulting to false and
   // correcting in an effect - otherwise a phone briefly starts the desktop
   // (unskipped, full-resolution) frame load before the mobile branch takes
   // over a moment later, wasting bandwidth on a load that gets cancelled.
-  const [reducedMotion, setReducedMotion] = useState(() => getInitialMatch('(prefers-reduced-motion: reduce)'));
   const [isMobile, setIsMobile] = useState(() => getInitialMatch('(max-width: 768px)'));
   const [showEndText, setShowEndText] = useState(false);
   const frameSet = isMobile ? FRAME_SETS.mobile : FRAME_SETS.desktop;
@@ -206,39 +205,34 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
 
   // Desktop: keep the header out of the way while the sequence plays, and
   // reveal it once the sequence nears completion (tied to the same
-  // threshold as the welcome text below). Phone, reduced-motion, and
-  // logged-in visitors (static hero, no scroll-linked reveal to wait for)
-  // keep the header visible throughout - hiding it only makes sense when
-  // something is actually going to bring it back.
+  // threshold as the welcome text below). Phone and logged-in visitors
+  // (static hero, no scroll-linked reveal to wait for) keep the header
+  // visible throughout - hiding it only makes sense when something is
+  // actually going to bring it back.
   useLayoutEffect(() => {
-    if (reducedMotion || isMobile || isLoggedIn) {
+    if (isMobile || isLoggedIn) {
       setHeaderVisible(true);
       return;
     }
     setHeaderVisible(false);
     return () => setHeaderVisible(true);
-  }, [reducedMotion, isMobile, isLoggedIn, setHeaderVisible]);
+  }, [isMobile, isLoggedIn, setHeaderVisible]);
 
   useEffect(() => {
-    // Initial values already come from the lazy useState initializers above -
-    // these listeners only need to react to later changes (e.g. rotating a
-    // tablet across the breakpoint, or toggling reduced-motion in OS settings).
-    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const motionListener = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
-    motionQuery.addEventListener('change', motionListener);
-
+    // Initial value already comes from the lazy useState initializer above -
+    // this listener only needs to react to later changes (e.g. rotating a
+    // tablet across the breakpoint).
     const mobileQuery = window.matchMedia('(max-width: 768px)');
     const mobileListener = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     mobileQuery.addEventListener('change', mobileListener);
 
     return () => {
-      motionQuery.removeEventListener('change', motionListener);
       mobileQuery.removeEventListener('change', mobileListener);
     };
   }, []);
 
   useEffect(() => {
-    if (reducedMotion || isLoggedIn) {
+    if (isLoggedIn) {
       // Logged-in visitors get the static welcome hero (see the render
       // branch below) - no reason to spend bandwidth loading ~250 frames
       // they'll never see.
@@ -317,14 +311,14 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [reducedMotion, isMobile, isLoggedIn]);
+  }, [isMobile, isLoggedIn]);
 
   // Block scrolling until every frame is loaded, so the pinned scroll
   // sequence below is guaranteed to be the first thing a user can scroll
   // into - otherwise a scroll during the load window skips straight past
   // the hero into the rest of the page before GSAP has even registered it.
   useEffect(() => {
-    if (reducedMotion || isLoaded || loadTimedOut) return;
+    if (isLoaded || loadTimedOut) return;
 
     const { overflow: htmlOverflow } = document.documentElement.style;
     const { overflow: bodyOverflow } = document.body.style;
@@ -335,10 +329,10 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
       document.documentElement.style.overflow = htmlOverflow;
       document.body.style.overflow = bodyOverflow;
     };
-  }, [isLoaded, reducedMotion, loadTimedOut]);
+  }, [isLoaded, loadTimedOut]);
 
   useEffect(() => {
-    if (!isLoaded || reducedMotion || !canvasRef.current || !containerRef.current) return;
+    if (!isLoaded || !canvasRef.current || !containerRef.current) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -472,7 +466,7 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
       setShowEndText(false);
       setHeroDark(false);
     };
-  }, [isLoaded, reducedMotion]);
+  }, [isLoaded]);
 
   // "Skip" control for the pinned scroll sequence - jumps straight to the
   // scroll position where the pin releases (GSAP's own `end`, which already
@@ -503,7 +497,7 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
     return () => observer.disconnect();
   }, [setHeroDark]);
 
-  if (reducedMotion || loadTimedOut || isLoggedIn) {
+  if (loadTimedOut || isLoggedIn) {
     return (
       <div className="w-full min-h-screen relative flex items-center mt-10 justify-center bg-[#F4F3EE]">
         <Image

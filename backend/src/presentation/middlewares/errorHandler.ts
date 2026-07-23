@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
+import mongoose from "mongoose";
 import { AppError } from "../../shared/errors/AppError";
 
 export function notFoundHandler(req: Request, res: Response): void {
@@ -26,6 +27,15 @@ export function errorHandler(
       message: err.message,
       details: err.details,
     });
+    return;
+  }
+
+  // A malformed :id/:bookId/etc. route param (not a valid ObjectId) throws
+  // this from Mongoose before any service code runs - treat it the same as
+  // "not found" rather than letting it fall through to a 500, since it's
+  // client input error, not a server fault.
+  if (err instanceof mongoose.Error.CastError) {
+    res.status(404).json({ message: "Resource not found" });
     return;
   }
 

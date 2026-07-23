@@ -23,3 +23,24 @@ export const passwordResetRateLimiter = rateLimit({
   legacyHeaders: false,
   message: { message: "Too many attempts, please try again later." },
 });
+
+// Without this, a password can be brute-forced at unlimited rate - 10
+// attempts/15min is far too slow to crack a real password but generous
+// enough not to lock out someone who just mistyped it a few times.
+export const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many login attempts, please try again later." },
+});
+
+// Looser than login - registration isn't a credential-guessing target, but
+// still worth capping against automated signup spam/abuse.
+export const registerRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many accounts created from this network, please try again later." },
+});

@@ -57,3 +57,9 @@ export const addressSchema = z.object({
     country: z.string().trim().min(1),
   }),
 });
+
+export const removeAddressSchema = z.object({
+  params: z.object({
+    index: z.coerce.number().int().nonnegative("index must be a non-negative integer"),
+  }),
+});
