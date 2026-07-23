@@ -17,13 +17,17 @@ gsap.registerPlugin(ScrollTrigger);
 ScrollTrigger.config({ ignoreMobileResize: true });
 
 // Separate frame sets per device - phones get a lighter, portrait-oriented
-// set (~7MB / 262 WebP frames) instead of the desktop landscape set (~12MB /
-// 270 frames), which is both heavier and awkwardly cropped on a tall narrow
-// viewport. Frames are WebP (q75) rather than the original raw PNGs, which
-// were 188MB/122MB respectively and made first load take minutes.
+// set instead of the desktop landscape set, which is both heavier and
+// awkwardly cropped on a tall narrow viewport. Frames are WebP (q85) rather
+// than the original raw PNGs, which were 188MB/122MB respectively and made
+// first load take minutes. Mobile additionally loads every other frame
+// (step: 2) - phones are the most likely to be on a slow/metered
+// connection, and GSAP's scrub still looks smooth at half the frame density
+// over the same scroll distance; this roughly halves both bytes and request
+// count on top of the WebP compression itself.
 const FRAME_SETS = {
-  mobile: { folder: 'new1', count: 262, extension: 'webp' },
-  desktop: { folder: 'good', count: 255, extension: 'webp' },
+  mobile: { folder: 'new1', count: 262, extension: 'webp', step: 2 },
+  desktop: { folder: 'good', count: 255, extension: 'webp', step: 1 },
 } as const;
 
 // Module-scope, not component state - persists across client-side
@@ -33,11 +37,150 @@ const FRAME_SETS = {
 // even though the browser's own HTTP cache already had the files.
 const frameCache: Partial<Record<keyof typeof FRAME_SETS, HTMLImageElement[]>> = {};
 
+// Shared by both the loader and the cache-validity check, so a frame set's
+// actual loaded length (after applying `step`) is computed identically in
+// both places rather than duplicating - and always includes the true final
+// frame even if the step wouldn't otherwise land on it.
+function buildFrameNumbers(count: number, step: number): number[] {
+  const numbers: number[] = [];
+  for (let i = 1; i <= count; i += step) numbers.push(i);
+  if (numbers[numbers.length - 1] !== count) numbers.push(count);
+  return numbers;
+}
+
 function getInitialMatch(query: string): boolean {
   return typeof window !== 'undefined' && window.matchMedia(query).matches;
 }
 
-export default function CanvasSequence() {
+// Shared between the animated sequence's end-of-scroll reveal and the
+// static hero (logged-in visitors, reduced-motion, or a load timeout) -
+// same welcome copy, divider, CTAs, and feature strip either way.
+// Text variants are toggled with CSS breakpoints (not a JS `isMobile` read)
+// on purpose - this component can now render during SSR (logged-in users),
+// and `isMobile` is only known once client JS runs, so branching on it here
+// would make the server and client render different text and fail
+// hydration. Both variants exist in the DOM at all times; only one is ever
+// visible.
+function HeroWelcomeContent() {
+  return (
+    <div className="absolute inset-0 top-16 left-4 right-4 md:top-30 md:left-30 md:right-25 pointer-events-none flex flex-col px-6 sm:px-12 md:px-20 pb-32 pt-4 md:pb-12 md:pt-8">
+      <div className="flex-1 flex flex-col items-start justify-center">
+        <p className="text-white/90 text-base sm:text-lg md:text-xl font-light mb-2 drop-shadow-md">
+          <AnimatedText text="Welcome to" />
+        </p>
+
+        <h1 className="text-white text-4xl sm:text-5xl md:text-7xl font-extrabold tracking-tight mb-5 drop-shadow-2xl">
+          <span className="md:hidden flex flex-wrap items-center justify-start gap-x-3">
+            <AnimatedText text="Explore Your" />
+            <span className="text-accent">
+              <AnimatedText text="Book" />
+            </span>
+            <AnimatedText text="World" />
+          </span>
+          <span className="hidden md:flex flex-wrap items-center justify-start gap-x-3">
+            <AnimatedText text="Chapter" />
+            <span className="text-accent">
+              <AnimatedText text="Book" />
+            </span>
+            <AnimatedText text="Store" />
+          </span>
+        </h1>
+
+        <div className="flex items-center gap-3 mb-5">
+          <span className="h-px w-10 sm:w-16 bg-accent/70" />
+          <svg viewBox="0 0 24 24" className="w-5 h-5 text-accent" fill="none" stroke="currentColor" strokeWidth={1.8}>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
+            />
+          </svg>
+          <span className="h-px w-10 sm:w-16 bg-accent/70" />
+        </div>
+
+        <p className="text-[#F4F3EE] text-base sm:text-lg md:text-2xl max-w-2xl font-light drop-shadow-md mb-8">
+          <span className="md:hidden">
+            <AnimatedText text="Discover stories made for you." />
+          </span>
+          <span className="hidden md:inline">
+            <AnimatedText text="Your library, waiting to be explored. Thousands of books. Infinite stories." />
+          </span>
+        </p>
+
+        <div className="pointer-events-auto flex flex-wrap items-center justify-start gap-3 sm:gap-4">
+          <Link
+            href="/shop"
+            className="inline-flex items-center gap-2 bg-accent text-[#111] font-semibold px-5 sm:px-6 py-3 rounded-full hover:brightness-110 transition-all"
+          >
+            Explore Books &rarr;
+          </Link>
+          <Link
+            href="/#new-arrivals"
+            className="inline-flex items-center gap-2 border border-white/70 text-white font-semibold px-5 sm:px-6 py-3 rounded-full hover:bg-white/10 transition-colors"
+          >
+            New Arrivals &rarr;
+          </Link>
+        </div>
+      </div>
+
+      <div className="pointer-events-auto grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6 bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl px-4 sm:px-8 py-4 sm:py-5 max-w-4xl w-full">
+        <div className="flex items-center gap-3 text-left">
+          <svg viewBox="0 0 24 24" className="w-6 h-6 text-accent flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8}>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
+            />
+          </svg>
+          <div>
+            <p className="text-white text-sm font-semibold">Wide Collection</p>
+            <p className="text-white/60 text-xs">Books for every reader</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 text-left">
+          <svg viewBox="0 0 24 24" className="w-6 h-6 text-accent flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <p className="text-white text-sm font-semibold">Best Quality</p>
+            <p className="text-white/60 text-xs">Carefully selected</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 text-left">
+          <svg viewBox="0 0 24 24" className="w-6 h-6 text-accent flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8}>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m9-3.348-9 0"
+            />
+          </svg>
+          <div>
+            <p className="text-white text-sm font-semibold">Fast Delivery</p>
+            <p className="text-white/60 text-xs">To your doorstep</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 text-left">
+          <svg viewBox="0 0 24 24" className="w-6 h-6 text-accent flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8}>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z"
+            />
+          </svg>
+          <div>
+            <p className="text-white text-sm font-semibold">Loved by Readers</p>
+            <p className="text-white/60 text-xs">Join thousands</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -63,19 +206,18 @@ export default function CanvasSequence() {
 
   // Desktop: keep the header out of the way while the sequence plays, and
   // reveal it once the sequence nears completion (tied to the same
-  // threshold as the welcome text below). Phone: header stays visible the
-  // whole time - on a small screen the animation is already the sole focus,
-  // and hiding/revealing chrome on top of a heavy scroll-pinned sequence is
-  // more disorienting than helpful. useLayoutEffect so the desktop hide
-  // commits before the browser paints, avoiding a flash of the header.
+  // threshold as the welcome text below). Phone, reduced-motion, and
+  // logged-in visitors (static hero, no scroll-linked reveal to wait for)
+  // keep the header visible throughout - hiding it only makes sense when
+  // something is actually going to bring it back.
   useLayoutEffect(() => {
-    if (reducedMotion || isMobile) {
+    if (reducedMotion || isMobile || isLoggedIn) {
       setHeaderVisible(true);
       return;
     }
     setHeaderVisible(false);
     return () => setHeaderVisible(true);
-  }, [reducedMotion, isMobile, setHeaderVisible]);
+  }, [reducedMotion, isMobile, isLoggedIn, setHeaderVisible]);
 
   useEffect(() => {
     // Initial values already come from the lazy useState initializers above -
@@ -96,14 +238,17 @@ export default function CanvasSequence() {
   }, []);
 
   useEffect(() => {
-    if (reducedMotion) {
+    if (reducedMotion || isLoggedIn) {
+      // Logged-in visitors get the static welcome hero (see the render
+      // branch below) - no reason to spend bandwidth loading ~250 frames
+      // they'll never see.
       setIsLoaded(true);
       return;
     }
 
     const cacheKey = isMobile ? 'mobile' : 'desktop';
     const cached = frameCache[cacheKey];
-    if (cached && cached.length === frameSet.count) {
+    if (cached && cached.length === buildFrameNumbers(frameSet.count, frameSet.step).length) {
       imagesRef.current = cached;
       setIsLoaded(true);
       return;
@@ -125,11 +270,7 @@ export default function CanvasSequence() {
     }, 20000);
 
     const loadImages = async () => {
-      // No frame-skipping needed anymore - the mobile set is already sized
-      // (and compressed) for phones, so it loads every frame in full.
-      const frameNumbers: number[] = [];
-      for (let i = 1; i <= frameSet.count; i++) frameNumbers.push(i);
-
+      const frameNumbers = buildFrameNumbers(frameSet.count, frameSet.step);
       const framesToLoad = frameNumbers.length;
       const images: HTMLImageElement[] = new Array(framesToLoad);
       let loaded = 0;
@@ -149,11 +290,11 @@ export default function CanvasSequence() {
           img.onerror = finish; // count and move on rather than stalling the whole sequence
         });
 
-      // Load with bounded concurrency instead of one-at-a-time - the frame
-      // set is ~300 large PNGs, and loading them fully sequentially made the
-      // "Entering the Library" wait (and the scroll-lock below) far longer
-      // than necessary.
-      const CONCURRENCY = 12;
+      // Load with bounded concurrency instead of one-at-a-time. Frames are
+      // now small WebP files (tens of KB, not the original raw PNGs), so a
+      // higher fan-out is safe and meaningfully cuts wall-clock load time,
+      // especially over HTTP/2 in production.
+      const CONCURRENCY = 24;
       let cursor = 0;
       const worker = async () => {
         while (cursor < framesToLoad) {
@@ -176,7 +317,7 @@ export default function CanvasSequence() {
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [reducedMotion, isMobile]);
+  }, [reducedMotion, isMobile, isLoggedIn]);
 
   // Block scrolling until every frame is loaded, so the pinned scroll
   // sequence below is guaranteed to be the first thing a user can scroll
@@ -362,11 +503,12 @@ export default function CanvasSequence() {
     return () => observer.disconnect();
   }, [setHeroDark]);
 
-  if (reducedMotion || loadTimedOut) {
+  if (reducedMotion || loadTimedOut || isLoggedIn) {
     return (
-      <div className="w-full h-screen relative flex items-center mt-10 justify-center bg-[#F4F3EE]">
+      <div className="w-full min-h-screen relative flex items-center mt-10 justify-center bg-[#F4F3EE]">
         <Image
-          src="/hero.png"
+        className='pt-10'
+          src="/heroo.png"
           alt="Library"
           fill
           priority
@@ -375,9 +517,14 @@ export default function CanvasSequence() {
             objectFit: "cover",
           }}
         />
-        <div className="absolute inset-0 bg-black/40 flex items-center justify-center px-4">
-          <h1 className="text-3xl sm:text-4xl md:text-7xl font-bold text-white text-center">Chapter Book Store</h1>
-        </div>
+        <div className="absolute inset-0 bg-black/40" />
+        {isLoggedIn ? (
+          <HeroWelcomeContent />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center px-4">
+            <h1 className="text-3xl sm:text-4xl md:text-7xl font-bold text-white text-center">Chapter Book Store</h1>
+          </div>
+        )}
       </div>
     );
   }
@@ -413,126 +560,7 @@ export default function CanvasSequence() {
           </svg>
         </button>
       )}
-      {showEndText && (
-        <div className="absolute inset-0 top-16 left-4 right-4 md:top-30 md:left-30 md:right-25 pointer-events-none flex flex-col px-6 sm:px-12 md:px-20 pb-32 pt-4 md:pb-12 md:pt-8">
-          <div className="flex-1 flex flex-col items-start justify-center">
-            <p className="text-white/90 text-base sm:text-lg md:text-xl font-light mb-2 drop-shadow-md">
-              <AnimatedText text="Welcome to" />
-            </p>
-
-            <h1 className="flex flex-wrap items-center justify-start gap-x-3 text-white text-4xl sm:text-5xl md:text-7xl font-extrabold tracking-tight mb-5 drop-shadow-2xl">
-              {isMobile ? (
-                <>
-                  <AnimatedText text="Explore Your" />
-                  <span className="text-accent">
-                    <AnimatedText text="Book" />
-                  </span>
-                  <AnimatedText text="World" />
-                </>
-              ) : (
-                <>
-                  <AnimatedText text="Chapter" />
-                  <span className="text-accent">
-                    <AnimatedText text="Book" />
-                  </span>
-                  <AnimatedText text="Store" />
-                </>
-              )}
-            </h1>
-
-            <div className="flex items-center gap-3 mb-5">
-              <span className="h-px w-10 sm:w-16 bg-accent/70" />
-              <svg viewBox="0 0 24 24" className="w-5 h-5 text-accent" fill="none" stroke="currentColor" strokeWidth={1.8}>
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
-                />
-              </svg>
-              <span className="h-px w-10 sm:w-16 bg-accent/70" />
-            </div>
-
-            <p className="text-[#F4F3EE] text-base sm:text-lg md:text-2xl max-w-2xl font-light drop-shadow-md mb-8">
-              <AnimatedText
-                text={
-                  isMobile
-                    ? 'Discover stories made for you.'
-                    : 'Your library, waiting to be explored. Thousands of books. Infinite stories.'
-                }
-              />
-            </p>
-
-            <div className="pointer-events-auto flex flex-wrap items-center justify-start gap-3 sm:gap-4">
-              <Link
-                href="/shop"
-                className="inline-flex items-center gap-2 bg-accent text-[#111] font-semibold px-5 sm:px-6 py-3 rounded-full hover:brightness-110 transition-all"
-              >
-                Explore Books &rarr;
-              </Link>
-              <Link
-                href="/#new-arrivals"
-                className="inline-flex items-center gap-2 border border-white/70 text-white font-semibold px-5 sm:px-6 py-3 rounded-full hover:bg-white/10 transition-colors"
-              >
-                New Arrivals &rarr;
-              </Link>
-            </div>
-          </div>
-
-          <div className="pointer-events-auto grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6 bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl px-4 sm:px-8 py-4 sm:py-5 max-w-4xl w-full">
-            <div className="flex items-center gap-3 text-left">
-              <svg viewBox="0 0 24 24" className="w-6 h-6 text-accent flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8}>
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
-                />
-              </svg>
-              <div>
-                <p className="text-white text-sm font-semibold">Wide Collection</p>
-                <p className="text-white/60 text-xs">Books for every reader</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 text-left">
-              <svg viewBox="0 0 24 24" className="w-6 h-6 text-accent flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div>
-                <p className="text-white text-sm font-semibold">Best Quality</p>
-                <p className="text-white/60 text-xs">Carefully selected</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 text-left">
-              <svg viewBox="0 0 24 24" className="w-6 h-6 text-accent flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8}>
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m9-3.348-9 0"
-                />
-              </svg>
-              <div>
-                <p className="text-white text-sm font-semibold">Fast Delivery</p>
-                <p className="text-white/60 text-xs">To your doorstep</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 text-left">
-              <svg viewBox="0 0 24 24" className="w-6 h-6 text-accent flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8}>
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z"
-                />
-              </svg>
-              <div>
-                <p className="text-white text-sm font-semibold">Loved by Readers</p>
-                <p className="text-white/60 text-xs">Join thousands</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {showEndText && <HeroWelcomeContent />}
     </div>
   );
 }

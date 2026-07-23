@@ -8,6 +8,6 @@ gsap.registerPlugin(ScrollToPlugin);
  * "smooth"})` (which is a quick, fixed-speed glide) - used anywhere the
  * scroll itself should read as a deliberate transition rather than a snap.
  */
-export function smoothScrollTo(target: number | string | HTMLElement, duration = 3.5): void {
+export function smoothScrollTo(target: number | string | HTMLElement, duration = 7): void {
   gsap.to(window, { duration, scrollTo: target, ease: "power2.inOut" });
 }

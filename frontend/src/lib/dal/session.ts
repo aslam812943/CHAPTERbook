@@ -20,8 +20,8 @@ export interface AuthTokens {
 const ACCESS_COOKIE = "access_token";
 const REFRESH_COOKIE = "refresh_token";
 
-const ACCESS_COOKIE_MAX_AGE = 60 * 60 * 24; // 1 day
-const REFRESH_COOKIE_MAX_AGE = 60 * 60 * 24; // 1 day
+const ACCESS_COOKIE_MAX_AGE = 60 * 60 * 24; // 1 day - renewed on every refresh anyway
+const REFRESH_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days - matches JWT_REFRESH_EXPIRES_IN
 
 function accessSecret(): string {
   const secret = process.env.JWT_ACCESS_SECRET;

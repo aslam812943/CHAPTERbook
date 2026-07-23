@@ -5,12 +5,17 @@ import CtaSection from '@/components/CtaSection';
 import LatestBooks from '@/components/LatestBooks';
 import BestSellers from '@/components/BestSellers';
 import ShopByCategory from '@/components/ShopByCategory';
+import { getSession } from '@/lib/dal/session';
 
-export default function Home() {
+export default async function Home() {
+  const session = await getSession();
+
   return (
     <main className="w-full bg-paper min-h-screen">
-      {/* 1. Hero & 2. Library Journey (Canvas Image Sequence) combined */}
-      <CanvasSequence />
+      {/* 1. Hero & 2. Library Journey (Canvas Image Sequence) combined -
+          logged-in users get the static welcome hero instead, so the
+          full frame sequence never even loads for them. */}
+      <CanvasSequence isLoggedIn={!!session} />
 
       {/* 3. Shop By Categories */}
       <ShopByCategory />
