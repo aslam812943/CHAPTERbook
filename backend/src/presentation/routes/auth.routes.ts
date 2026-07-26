@@ -2,10 +2,16 @@ import { Router } from "express";
 import { AuthController } from "../controllers/AuthController";
 import { authenticate } from "../middlewares/authenticate";
 import { validate } from "../middlewares/validate";
-import { loginRateLimiter, passwordResetRateLimiter, registerRateLimiter } from "../middlewares/rateLimit";
+import {
+  changePasswordRateLimiter,
+  loginRateLimiter,
+  passwordResetRateLimiter,
+  registerRateLimiter,
+} from "../middlewares/rateLimit";
 import { asyncHandler } from "../../shared/utils/asyncHandler";
 import {
   addressSchema,
+  changePasswordSchema,
   forgotPasswordSchema,
   googleAuthSchema,
   loginSchema,
@@ -30,6 +36,19 @@ export function buildAuthRouter(controller: AuthController): Router {
     authenticate,
     validate(removeAddressSchema),
     asyncHandler(controller.removeAddress)
+  );
+  router.patch(
+    "/me/addresses/:index/default",
+    authenticate,
+    validate(removeAddressSchema),
+    asyncHandler(controller.setDefaultAddress)
+  );
+  router.post(
+    "/me/password",
+    authenticate,
+    changePasswordRateLimiter,
+    validate(changePasswordSchema),
+    asyncHandler(controller.changePassword)
   );
 
   router.post(

@@ -19,6 +19,11 @@ export default async function CheckoutPage() {
 
   const savedAddress = user.addresses[0];
 
+  const totalSavings = cart.items.reduce(
+    (sum, item) => sum + (item.originalPrice - item.price) * item.quantity,
+    0
+  );
+
   return (
     <div className="min-h-screen bg-paper text-ink py-24 px-4 sm:px-8">
       <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-[1fr_320px] gap-12">
@@ -31,17 +36,32 @@ export default async function CheckoutPage() {
           <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
           <div className="space-y-3 mb-4">
             {cart.items.map((item) => (
-              <div key={item.bookId} className="flex justify-between text-sm">
+              <div key={item.bookId} className="flex justify-between text-sm gap-3">
                 <span className="text-gray-600">
                   {item.title} <span className="text-gray-400">x{item.quantity}</span>
+                  {item.discountPercentage > 0 && (
+                    <>
+                      {" "}
+                      <span className="line-through text-gray-400">₹{item.originalPrice.toFixed(2)}</span>{" "}
+                      <span className="text-accent">-{item.discountPercentage}%</span>
+                    </>
+                  )}
                 </span>
-                <span className="text-gray-800">₹{(item.price * item.quantity).toFixed(2)}</span>
+                <span className="text-gray-800 flex-shrink-0">₹{(item.price * item.quantity).toFixed(2)}</span>
               </div>
             ))}
           </div>
-          <div className="flex justify-between border-t border-gray-200 pt-4 font-semibold">
-            <span>Total</span>
-            <span className="text-accent">₹{cart.total.toFixed(2)}</span>
+          <div className="border-t border-gray-200 pt-4 space-y-1.5">
+            {totalSavings > 0 && (
+              <div className="flex justify-between text-sm text-accent">
+                <span>You save</span>
+                <span>₹{totalSavings.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-semibold">
+              <span>Total</span>
+              <span className="text-accent">₹{cart.total.toFixed(2)}</span>
+            </div>
           </div>
         </div>
       </div>

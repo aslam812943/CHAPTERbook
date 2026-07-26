@@ -8,6 +8,7 @@ export interface IUserRepository {
   linkGoogleAccount(userId: string, googleId: string): Promise<User | null>;
   addAddress(userId: string, address: Address): Promise<User | null>;
   removeAddress(userId: string, addressIndex: number): Promise<User | null>;
+  setDefaultAddress(userId: string, addressIndex: number): Promise<User | null>;
   setResetCode(userId: string, codeHash: string, expiresAt: Date): Promise<void>;
   clearResetCode(userId: string): Promise<void>;
   updatePassword(userId: string, passwordHash: string): Promise<void>;

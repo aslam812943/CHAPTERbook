@@ -63,3 +63,10 @@ export const removeAddressSchema = z.object({
     index: z.coerce.number().int().nonnegative("index must be a non-negative integer"),
   }),
 });
+
+export const changePasswordSchema = z.object({
+  body: z.object({
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: z.string().min(6, "Password must be at least 6 characters"),
+  }),
+});

@@ -4,7 +4,7 @@ import { PasswordHasher } from "../../shared/utils/password";
 import { JwtPayload, TokenService } from "../../shared/utils/jwt";
 import { sendPasswordResetEmail } from "../../shared/utils/mailer";
 import { verifyGoogleIdToken } from "../../shared/utils/googleAuth";
-import { ConflictError, UnauthorizedError } from "../../shared/errors/AppError";
+import { ConflictError, UnauthorizedError, ValidationError } from "../../shared/errors/AppError";
 
 const RESET_CODE_TTL_MS = 15 * 60 * 1000;
 
@@ -138,6 +138,32 @@ export class AuthService {
       throw new UnauthorizedError("Session is no longer valid");
     }
     return toSafeUser(user);
+  }
+
+  async setDefaultAddress(userId: string, addressIndex: number): Promise<SafeUser> {
+    const user = await this.userRepository.setDefaultAddress(userId, addressIndex);
+    if (!user) {
+      throw new UnauthorizedError("Session is no longer valid");
+    }
+    return toSafeUser(user);
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new UnauthorizedError("Session is no longer valid");
+    }
+    if (!user.passwordHash) {
+      throw new ValidationError("This account signed in with Google and has no password to change");
+    }
+
+    const valid = await PasswordHasher.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      throw new UnauthorizedError("Current password is incorrect");
+    }
+
+    const passwordHash = await PasswordHasher.hash(newPassword);
+    await this.userRepository.updatePassword(user.id, passwordHash);
   }
 
   // Always resolves - a nonexistent email silently does nothing, so this

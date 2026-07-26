@@ -24,6 +24,12 @@ export class CartService {
       throw new ValidationError("Book not found");
     }
 
+    const existingCart = await this.cartRepository.findByUserId(userId);
+    const existingQuantity = existingCart?.items.find((item) => item.bookId === bookId)?.quantity ?? 0;
+    if (existingQuantity + quantity > book.stock) {
+      throw new ValidationError(`Only ${book.stock} in stock`);
+    }
+
     const cart = await this.cartRepository.addItem(userId, bookId, quantity);
     return this.toView(cart);
   }
@@ -31,6 +37,16 @@ export class CartService {
   async updateItemQuantity(userId: string, bookId: string, quantity: number): Promise<CartView> {
     if (quantity < 0) {
       throw new ValidationError("Quantity cannot be negative");
+    }
+
+    if (quantity > 0) {
+      const book = await this.bookRepository.findById(bookId);
+      if (!book) {
+        throw new ValidationError("Book not found");
+      }
+      if (quantity > book.stock) {
+        throw new ValidationError(`Only ${book.stock} in stock`);
+      }
     }
 
     const cart =

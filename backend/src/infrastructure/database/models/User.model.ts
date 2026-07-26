@@ -8,6 +8,7 @@ export interface AddressSubdocument {
   city: string;
   postalCode?: string;
   country: string;
+  isDefault: boolean;
 }
 
 export interface UserDocument extends Document<Types.ObjectId> {
@@ -33,6 +34,7 @@ const addressSchema = new Schema<AddressSubdocument>(
     city: { type: String, required: true },
     postalCode: { type: String },
     country: { type: String, required: true },
+    isDefault: { type: Boolean, default: false },
   },
   { _id: false }
 );

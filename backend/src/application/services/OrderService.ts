@@ -27,6 +27,11 @@ export class OrderService {
       throw new ValidationError("Your cart is empty");
     }
 
+    const outOfStock = cartView.items.find((item) => item.quantity > item.stock);
+    if (outOfStock) {
+      throw new ValidationError(`Only ${outOfStock.stock} of "${outOfStock.title}" in stock`);
+    }
+
     const existing = await this.orderRepository.findRecentByUserAndTotal(
       userId,
       cartView.total,
@@ -65,8 +70,9 @@ export class OrderService {
     return { order, whatsappUrl: buildWhatsAppUrl(whatsappMessage, env.WHATSAPP_NUMBER) };
   }
 
-  listForUser(userId: string): Promise<Order[]> {
-    return this.orderRepository.findByUserId(userId);
+  async listForUser(userId: string): Promise<Order[]> {
+    const orders = await this.orderRepository.findByUserId(userId);
+    return orders.filter((order) => order.status !== "pending");
   }
 
   async getById(userId: string, orderId: string): Promise<Order> {

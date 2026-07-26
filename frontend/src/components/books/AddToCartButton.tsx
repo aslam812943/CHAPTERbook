@@ -1,8 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
-import { addToCartAction, AddToCartFormState } from "@/app/books/[id]/actions";
+import { addToCartAction, buyNowAction, AddToCartFormState } from "@/app/books/[id]/actions";
+import Toast from "@/components/Toast";
+import { useToast } from "@/hooks/useToast";
 
 const initialState: AddToCartFormState = { success: false, message: "" };
 
@@ -22,15 +24,30 @@ function SubmitButton({ disabled }: { disabled: boolean }) {
 export default function AddToCartButton({ bookId, stock, isLoggedIn }: { bookId: string; stock: number; isLoggedIn: boolean }) {
   const [quantity, setQuantity] = useState(1);
   const [state, formAction] = useActionState(addToCartAction, initialState);
-  const [toast, setToast] = useState({ message: "", visible: false });
+  const { toast, showToast } = useToast();
+  const [isBuyingNow, startBuyNow] = useTransition();
+  const [buyNowError, setBuyNowError] = useState("");
 
   const handleAction = (payload: FormData) => {
     if (!isLoggedIn) {
-      setToast({ message: "Please login to add to cart", visible: true });
-      setTimeout(() => setToast((prev) => ({ ...prev, visible: false })), 3000);
+      showToast("Please login to add to cart", false);
       return;
     }
     formAction(payload);
+  };
+
+  const handleBuyNow = () => {
+    if (!isLoggedIn) {
+      showToast("Please login to buy now", false);
+      return;
+    }
+    setBuyNowError("");
+    startBuyNow(async () => {
+      const result = await buyNowAction(bookId, quantity);
+      if (!result.success) {
+        setBuyNowError(result.message);
+      }
+    });
   };
 
   return (
@@ -73,28 +90,25 @@ export default function AddToCartButton({ bookId, stock, isLoggedIn }: { bookId:
         </div>
       )}
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
         <SubmitButton disabled={stock === 0} />
+        <button
+          type="button"
+          onClick={handleBuyNow}
+          disabled={stock === 0 || isBuyingNow}
+          className="flex-1 bg-ink text-paper font-semibold py-3 px-6 rounded-md hover:bg-accent hover:text-ink transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isBuyingNow ? "Processing..." : "Buy Now"}
+        </button>
       </div>
 
       {state.message && (
         <p className={`text-sm ${state.success ? "text-green-600" : "text-red-600"}`}>{state.message}</p>
       )}
+      {buyNowError && <p className="text-sm text-red-600">{buyNowError}</p>}
     </form>
 
-      {/* Local Toast Notification */}
-      <div
-        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] transition-all duration-300 ${
-          toast.visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
-        }`}
-      >
-        <div className="bg-[#1a1a1a] text-white px-5 py-3 rounded-full shadow-2xl flex items-center gap-2 text-sm whitespace-nowrap">
-          <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white">
-            <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm8.706-1.442c1.146-.573 2.437.463 2.126 1.706l-.709 2.836.042-.02a.75.75 0 01.67 1.34l-.04.022c-1.147.573-2.438-.463-2.127-1.706l.71-2.836-.042.02a.75.75 0 11-.671-1.34l.041-.022zM12 9a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
-          </svg>
-          {toast.message}
-        </div>
-      </div>
+      <Toast message={toast.message} visible={toast.visible} success={toast.success} />
     </>
   );
 }

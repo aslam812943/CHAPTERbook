@@ -9,14 +9,8 @@ export interface CartActionState {
   message: string;
 }
 
-export async function updateCartItemAction(
-  _prevState: CartActionState,
-  formData: FormData
-): Promise<CartActionState> {
+export async function updateCartItemAction(bookId: string, quantity: number): Promise<CartActionState> {
   await requireUser();
-
-  const bookId = String(formData.get("bookId") ?? "");
-  const quantity = Number(formData.get("quantity") ?? 0);
 
   try {
     await withRefresh(() => apiClient.patch(`/cart/items/${bookId}`, { quantity }, { auth: true }));
@@ -32,9 +26,19 @@ export async function updateCartItemAction(
   return { success: true, message: "" };
 }
 
-export async function removeCartItemAction(bookId: string): Promise<void> {
+export async function removeCartItemAction(bookId: string): Promise<CartActionState> {
   await requireUser();
-  await withRefresh(() => apiClient.delete(`/cart/items/${bookId}`, { auth: true }));
+
+  try {
+    await withRefresh(() => apiClient.delete(`/cart/items/${bookId}`, { auth: true }));
+  } catch (err) {
+    if (err instanceof ApiError) {
+      return { success: false, message: err.message };
+    }
+    return { success: false, message: "Failed to remove item." };
+  }
+
   revalidatePath("/cart");
   revalidatePath("/", "layout");
+  return { success: true, message: "" };
 }

@@ -48,6 +48,18 @@ export class AuthController {
     res.json({ user });
   };
 
+  setDefaultAddress = async (req: Request, res: Response): Promise<void> => {
+    const index = Number(req.params.index);
+    const user = await this.authService.setDefaultAddress(req.user!.sub, index);
+    res.json({ user });
+  };
+
+  changePassword = async (req: Request, res: Response): Promise<void> => {
+    const { currentPassword, newPassword } = req.body;
+    await this.authService.changePassword(req.user!.sub, currentPassword, newPassword);
+    res.json({ message: "Password updated." });
+  };
+
   forgotPassword = async (req: Request, res: Response): Promise<void> => {
     await this.authService.requestPasswordReset(req.body.email);
     // Same response whether or not the email exists, so this can't be used

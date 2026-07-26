@@ -17,7 +17,7 @@ export interface OrderMessageInput {
 export function buildOrderWhatsAppMessage(input: OrderMessageInput): string {
   const lines = [
     "New Book Order",
-    `Order Ref: ${input.orderRef}`,
+    `Order Ref: *${input.orderRef}*`,
     "",
     "Items:",
     ...input.items.map(
@@ -32,6 +32,8 @@ export function buildOrderWhatsAppMessage(input: OrderMessageInput): string {
     input.address.addressLine,
     [input.address.city, input.address.postalCode].filter(Boolean).join(", "),
     input.address.country,
+    "",
+    `Seller: please confirm this order in the admin panel using Order Ref *${input.orderRef}* before fulfilling — treat this message as a notification only, not the source of truth for items/price.`,
   ];
 
   return lines.join("\n");

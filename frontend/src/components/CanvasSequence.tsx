@@ -205,18 +205,29 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
 
   // Desktop: keep the header out of the way while the sequence plays, and
   // reveal it once the sequence nears completion (tied to the same
-  // threshold as the welcome text below). Phone and logged-in visitors
-  // (static hero, no scroll-linked reveal to wait for) keep the header
-  // visible throughout - hiding it only makes sense when something is
-  // actually going to bring it back.
+  // threshold as the welcome text below) - logged-in visitors go through
+  // this too now (just via the faster auto-play below instead of manual
+  // scroll), so they get the same hide-then-reveal beat. Phone keeps the
+  // header visible throughout regardless - on a small screen the animation
+  // is already the sole focus.
   useLayoutEffect(() => {
-    if (isMobile || isLoggedIn) {
+    if (isMobile) {
       setHeaderVisible(true);
       return;
     }
     setHeaderVisible(false);
     return () => setHeaderVisible(true);
-  }, [isMobile, isLoggedIn, setHeaderVisible]);
+  }, [isMobile, setHeaderVisible]);
+
+  // Only the load-timeout fallback needs this on mount - it bypasses the
+  // animation entirely, so nothing else would ever tell the header to go
+  // dark. The logged-in path now plays the real animation (see below),
+  // which sets this itself once it reaches the end frame.
+  useEffect(() => {
+    if (!loadTimedOut) return;
+    setHeroDark(true);
+    return () => setHeroDark(false);
+  }, [loadTimedOut, setHeroDark]);
 
   useEffect(() => {
     // Initial value already comes from the lazy useState initializer above -
@@ -232,14 +243,6 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
   }, []);
 
   useEffect(() => {
-    if (isLoggedIn) {
-      // Logged-in visitors get the static welcome hero (see the render
-      // branch below) - no reason to spend bandwidth loading ~250 frames
-      // they'll never see.
-      setIsLoaded(true);
-      return;
-    }
-
     const cacheKey = isMobile ? 'mobile' : 'desktop';
     const cached = frameCache[cacheKey];
     if (cached && cached.length === buildFrameNumbers(frameSet.count, frameSet.step).length) {
@@ -311,7 +314,7 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [isMobile, isLoggedIn]);
+  }, [isMobile]);
 
   // Block scrolling until every frame is loaded, so the pinned scroll
   // sequence below is guaranteed to be the first thing a user can scroll
@@ -381,13 +384,70 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
     window.addEventListener('resize', handleResize);
     updateCanvasSize();
 
-    // GSAP ScrollTrigger
     const totalImages = imagesRef.current.length - 1;
 
     // Welcome text fades in only once the sequence is nearly done playing
     // (last 6% of frames), so it reads as the payoff at the end of the
     // animation rather than competing with it.
     const endTextThreshold = Math.round(totalImages * 0.94);
+
+    const advanceTo = (frameIndex: number) => {
+      if (frameIndex === currentFrame.current) return;
+      currentFrame.current = frameIndex;
+      requestAnimationFrame(() => renderFrame(frameIndex));
+
+      const shouldShowEndText = frameIndex >= endTextThreshold;
+      if (shouldShowEndText !== endTextShownRef.current) {
+        endTextShownRef.current = shouldShowEndText;
+        setShowEndText(shouldShowEndText);
+        // While the welcome text is showing, the header is sitting directly
+        // on top of the hero's bright last frame - switch it to a dark
+        // variant for contrast (see the IntersectionObserver effect below
+        // for when this gets handed back to the normal light header).
+        setHeroDark(shouldShowEndText);
+        // Header is already visible throughout on mobile (see the
+        // useLayoutEffect above) - don't let this fight that by hiding it
+        // again before the threshold.
+        if (!isMobile) setHeaderVisible(shouldShowEndText);
+      }
+    };
+
+    // Guarantees the very last frame is painted and the end state shown,
+    // even if advanceTo's threshold check above already handled it (in
+    // which case this is a harmless no-op past the ref guard).
+    const revealEnd = () => {
+      currentFrame.current = totalImages;
+      renderFrame(totalImages);
+      if (!endTextShownRef.current) {
+        endTextShownRef.current = true;
+        setShowEndText(true);
+        setHeroDark(true);
+        if (!isMobile) setHeaderVisible(true);
+      }
+    };
+
+    if (isLoggedIn) {
+      // Logged-in visitors still get to see the intro - just auto-played on
+      // a short timer instead of tied to manual scroll, since they don't
+      // need to scroll through it themselves to reach the payoff.
+      const progress = { value: 0 };
+      const autoplay = gsap.to(progress, {
+        value: 1,
+        duration: 2.5,
+        ease: 'power1.inOut',
+        onUpdate: () => advanceTo(Math.floor(progress.value * totalImages)),
+        onComplete: revealEnd,
+      });
+
+      return () => {
+        if (resizeTimeout) clearTimeout(resizeTimeout);
+        window.removeEventListener('resize', handleResize);
+        autoplay.kill();
+        endTextShownRef.current = false;
+        setShowEndText(false);
+        setHeroDark(false);
+      };
+    }
 
     const tl = gsap.timeline({
       scrollTrigger: {
@@ -404,34 +464,11 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
         pin: true,
         anticipatePin: 1,
         onUpdate: (self) => {
-          // Render based on progress
-          const frameIndex = Math.floor(self.progress * totalImages);
-          if (frameIndex !== currentFrame.current) {
-            currentFrame.current = frameIndex;
-            requestAnimationFrame(() => renderFrame(frameIndex));
-
-            const shouldShowEndText = frameIndex >= endTextThreshold;
-            if (shouldShowEndText !== endTextShownRef.current) {
-              endTextShownRef.current = shouldShowEndText;
-              setShowEndText(shouldShowEndText);
-              // While the welcome text is showing, the header is sitting
-              // directly on top of the hero's bright last frame - switch it
-              // to a dark variant for contrast (see the IntersectionObserver
-              // effect below for when this gets handed back to the normal
-              // light header).
-              setHeroDark(shouldShowEndText);
-              // Header is already visible throughout on mobile (see the
-              // useLayoutEffect above) - don't let this fight that by
-              // hiding it again before the threshold.
-              if (!isMobile) setHeaderVisible(shouldShowEndText);
-            }
-          }
-
+          advanceTo(Math.floor(self.progress * totalImages));
           // Guarantee the very last frame is painted before the pin can
-          // release, even if onUpdate's index check above missed it.
+          // release, even if the threshold check above missed it.
           if (self.progress >= 1 && currentFrame.current !== totalImages) {
-            currentFrame.current = totalImages;
-            renderFrame(totalImages);
+            revealEnd();
           }
         }
       }
@@ -466,7 +503,7 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
       setShowEndText(false);
       setHeroDark(false);
     };
-  }, [isLoaded]);
+  }, [isLoaded, isLoggedIn]);
 
   // "Skip" control for the pinned scroll sequence - jumps straight to the
   // scroll position where the pin releases (GSAP's own `end`, which already
@@ -497,11 +534,10 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
     return () => observer.disconnect();
   }, [setHeroDark]);
 
-  if (loadTimedOut || isLoggedIn) {
+  if (loadTimedOut) {
     return (
-      <div className="w-full min-h-screen relative flex items-center mt-10 justify-center bg-[#F4F3EE]">
+      <div className="w-full h-screen relative flex items-center justify-center bg-[#F4F3EE]">
         <Image
-        className='pt-10'
           src="/heroo.png"
           alt="Library"
           fill
@@ -512,13 +548,7 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
           }}
         />
         <div className="absolute inset-0 bg-black/40" />
-        {isLoggedIn ? (
-          <HeroWelcomeContent />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center px-4">
-            <h1 className="text-3xl sm:text-4xl md:text-7xl font-bold text-white text-center">Chapter Book Store</h1>
-          </div>
-        )}
+        <HeroWelcomeContent />
       </div>
     );
   }
@@ -541,7 +571,7 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
         ref={canvasRef}
         className="absolute top-0 left-0 w-full h-full object-cover"
       />
-      {isLoaded && !showEndText && (
+      {isLoaded && !showEndText && !isLoggedIn && (
         <button
           type="button"
           onClick={handleSkipToEnd}

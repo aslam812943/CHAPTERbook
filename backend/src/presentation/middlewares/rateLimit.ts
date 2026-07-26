@@ -44,3 +44,14 @@ export const registerRateLimiter = rateLimit({
   legacyHeaders: false,
   message: { message: "Too many accounts created from this network, please try again later." },
 });
+
+// This requires a valid access token already, so it's not an anonymous
+// brute-force vector - but it's still a current-password check, so it
+// deserves the same defense-in-depth as login.
+export const changePasswordRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many attempts, please try again later." },
+});

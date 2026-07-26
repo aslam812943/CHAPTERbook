@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addToWishlistAction, removeFromWishlistAction } from "@/app/wishlist/actions";
+import Toast from "@/components/Toast";
+import { useToast } from "@/hooks/useToast";
 
 interface WishlistButtonProps {
   bookId: string;
@@ -13,19 +15,20 @@ interface WishlistButtonProps {
 export default function WishlistButton({ bookId, wishlisted, isLoggedIn = false }: WishlistButtonProps) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
-  const [toast, setToast] = useState({ message: "", visible: false });
+  const { toast, showToast } = useToast();
 
   function toggle() {
     if (!isLoggedIn) {
-      setToast({ message: "Please login to save books to your wishlist", visible: true });
-      setTimeout(() => setToast((prev) => ({ ...prev, visible: false })), 3000);
+      showToast("Please login to save books to your wishlist", false);
       return;
     }
     startTransition(async () => {
       if (wishlisted) {
         await removeFromWishlistAction(bookId);
+        showToast("Removed from wishlist");
       } else {
         await addToWishlistAction(bookId);
+        showToast("Added to wishlist");
       }
       router.refresh();
     });
@@ -60,19 +63,7 @@ export default function WishlistButton({ bookId, wishlisted, isLoggedIn = false 
       </svg>
     </button>
 
-      {/* Local Toast Notification */}
-      <div
-        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] transition-all duration-300 ${
-          toast.visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
-        }`}
-      >
-        <div className="bg-[#1a1a1a] text-white px-5 py-3 rounded-full shadow-2xl flex items-center gap-2 text-sm whitespace-nowrap">
-          <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white">
-            <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm8.706-1.442c1.146-.573 2.437.463 2.126 1.706l-.709 2.836.042-.02a.75.75 0 01.67 1.34l-.04.022c-1.147.573-2.438-.463-2.127-1.706l.71-2.836-.042.02a.75.75 0 11-.671-1.34l.041-.022zM12 9a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
-          </svg>
-          {toast.message}
-        </div>
-      </div>
+      <Toast message={toast.message} visible={toast.visible} success={toast.success} />
     </>
   );
 }

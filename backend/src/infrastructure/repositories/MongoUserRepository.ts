@@ -18,6 +18,7 @@ function toDomain(doc: UserDocument): User {
       city: a.city,
       postalCode: a.postalCode,
       country: a.country,
+      isDefault: a.isDefault,
     })),
     resetCodeHash: doc.resetCodeHash,
     resetCodeExpiresAt: doc.resetCodeExpiresAt,
@@ -74,6 +75,17 @@ export class MongoUserRepository implements IUserRepository {
     if (!doc) return null;
     if (addressIndex < 0 || addressIndex >= doc.addresses.length) return toDomain(doc);
     doc.addresses.splice(addressIndex, 1);
+    await doc.save();
+    return toDomain(doc);
+  }
+
+  async setDefaultAddress(userId: string, addressIndex: number): Promise<User | null> {
+    const doc = await UserModel.findById(userId);
+    if (!doc) return null;
+    if (addressIndex < 0 || addressIndex >= doc.addresses.length) return toDomain(doc);
+    doc.addresses.forEach((address, i) => {
+      address.isDefault = i === addressIndex;
+    });
     await doc.save();
     return toDomain(doc);
   }

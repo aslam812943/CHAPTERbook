@@ -104,7 +104,7 @@ export default function LibraryShelf({
             <div className="mb-3 sm:pl-20 sm:mb-6">
               <h1 className="text-2xl sm:text-4xl md:text-5xl font-serif font-bold text-black mb-2 leading-tight">
                 Discover <br className="hidden sm:block" />
-                <span className="text-[#B8860B]">Books You'll Love</span>
+                <span className="text-[#B8860B]">Books You&apos;ll Love</span>
               </h1>
               <p className="text-sm sm:text-base font-medium text-black max-w-sm">
                 Explore thousands of handpicked books <br className="hidden sm:block" />

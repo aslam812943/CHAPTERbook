@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/dal/session";
 import { apiClient, ApiError, withRefresh } from "@/lib/dal/apiClient";
 
@@ -30,6 +31,23 @@ export async function addToCartAction(
   revalidatePath("/cart");
   revalidatePath("/", "layout");
   return { success: true, message: "Added to cart." };
+}
+
+export async function buyNowAction(bookId: string, quantity: number): Promise<AddToCartFormState> {
+  await requireUser();
+
+  try {
+    await withRefresh(() => apiClient.patch(`/cart/items/${bookId}`, { quantity }, { auth: true }));
+  } catch (err) {
+    if (err instanceof ApiError) {
+      return { success: false, message: err.message };
+    }
+    return { success: false, message: "Failed to add to cart. Please try again." };
+  }
+
+  revalidatePath("/cart");
+  revalidatePath("/", "layout");
+  redirect("/checkout");
 }
 
 export interface ReviewActionState {
