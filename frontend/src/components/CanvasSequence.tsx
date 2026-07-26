@@ -283,7 +283,20 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
             setLoadingProgress(Math.round((loaded / framesToLoad) * 100));
             resolve();
           };
-          img.onload = finish;
+          img.onload = () => {
+            // Browsers can defer the actual bitmap decode until an image is
+            // first drawn, rather than doing it on load - left alone, that
+            // means the first drawImage() of each not-yet-seen frame pays a
+            // synchronous decode cost mid-animation, which is exactly what
+            // shows up as jank once the scroll/autoplay reaches frames nobody
+            // has drawn yet. Deciding decode() here instead pays that cost
+            // once, up front, while the loading screen is already showing.
+            if (typeof img.decode === 'function') {
+              img.decode().then(finish).catch(finish);
+            } else {
+              finish();
+            }
+          };
           img.onerror = finish; // count and move on rather than stalling the whole sequence
         });
 
@@ -536,7 +549,7 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
 
   if (loadTimedOut) {
     return (
-      <div className="w-full h-screen relative flex items-center justify-center bg-[#F4F3EE]">
+      <div className="w-full h-dvh relative flex items-center justify-center bg-[#F4F3EE]">
         <Image
           src="/heroo.png"
           alt="Library"
@@ -554,7 +567,7 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
   }
 
   return (
-    <div ref={containerRef} className="relative w-full h-screen bg-paper">
+    <div ref={containerRef} className="relative w-full h-dvh bg-paper">
       {!isLoaded && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-paper z-50 text-ink px-4">
           <div className="text-lg sm:text-2xl font-semibold mb-4 text-center">Entering the Library...</div>
