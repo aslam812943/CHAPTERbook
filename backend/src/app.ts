@@ -25,7 +25,18 @@ export function createApp(): Express {
       credentials: true,
     })
   );
-  app.use(express.json());
+  // Razorpay webhook signatures are computed over the exact raw request
+  // bytes - re-serializing the already-parsed JSON body would produce a
+  // different byte sequence (key order, whitespace) and fail verification,
+  // so the raw buffer is captured here once for every request rather than
+  // adding a second, route-specific body parser just for the webhook route.
+  app.use(
+    express.json({
+      verify: (req, _res, buf) => {
+        (req as express.Request & { rawBody?: Buffer }).rawBody = buf;
+      },
+    })
+  );
 
   app.get("/health", (_req, res) => {
     res.json({ status: "ok" });

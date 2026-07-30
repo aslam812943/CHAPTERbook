@@ -3,6 +3,7 @@ import { Address } from "./User";
 export type { Pagination, PaginatedResult } from "./common";
 
 export type OrderStatus = "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
+export type PaymentStatus = "unpaid" | "paid" | "failed";
 
 export interface OrderItem {
   bookId: string;
@@ -20,6 +21,9 @@ export interface Order {
   deliveryAddressSnapshot: Address;
   status: OrderStatus;
   whatsappMessage: string;
+  paymentStatus: PaymentStatus;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
   createdAt: Date;
   updatedAt: Date;
 }

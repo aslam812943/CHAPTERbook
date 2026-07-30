@@ -1,5 +1,5 @@
 import { Schema, model, Document, Types } from "mongoose";
-import { OrderStatus } from "../../../domain/entities/Order";
+import { OrderStatus, PaymentStatus } from "../../../domain/entities/Order";
 import { AddressSubdocument } from "./User.model";
 
 export interface OrderItemSubdocument {
@@ -17,6 +17,9 @@ export interface OrderDocument extends Document<Types.ObjectId> {
   deliveryAddressSnapshot: AddressSubdocument;
   status: OrderStatus;
   whatsappMessage: string;
+  paymentStatus: PaymentStatus;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -56,6 +59,13 @@ const orderSchema = new Schema<OrderDocument>(
       default: "pending",
     },
     whatsappMessage: { type: String, required: true },
+    paymentStatus: {
+      type: String,
+      enum: ["unpaid", "paid", "failed"],
+      default: "unpaid",
+    },
+    razorpayOrderId: { type: String },
+    razorpayPaymentId: { type: String },
   },
   { timestamps: true }
 );

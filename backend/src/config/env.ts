@@ -24,6 +24,14 @@ const envSchema = z.object({
   // Optional at parse time for the same reason as the Gmail vars above; the
   // Google auth util throws a clear error if invoked without it set.
   GOOGLE_CLIENT_ID: z.string().optional().default(""),
+  // Razorpay - optional at parse time so a missing config doesn't take down
+  // the whole server; PaymentService throws a clear error if invoked without
+  // these set. RAZORPAY_WEBHOOK_SECRET is set up separately in the Razorpay
+  // dashboard once the webhook URL exists, so it's normal for it to be empty
+  // until then.
+  RAZORPAY_KEY_ID: z.string().optional().default(""),
+  RAZORPAY_KEY_SECRET: z.string().optional().default(""),
+  RAZORPAY_WEBHOOK_SECRET: z.string().optional().default(""),
 });
 
 const parsed = envSchema.safeParse(process.env);

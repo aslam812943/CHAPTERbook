@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/dal/session";
 import { apiClient, ApiError } from "@/lib/dal/apiClient";
 import { Order } from "@/types/order";
-import WhatsAppRedirect from "@/components/checkout/WhatsAppRedirect";
+import RazorpayPayButton from "@/components/checkout/RazorpayPayButton";
 
 export default async function OrderConfirmationPage({
   params,
@@ -24,19 +24,29 @@ export default async function OrderConfirmationPage({
     throw err;
   }
 
-  const whatsappNumber = process.env.WHATSAPP_NUMBER ?? "";
-  const waUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(order.whatsappMessage)}`;
-
   return (
     <div className="min-h-screen bg-paper text-ink py-24 px-4 sm:px-8">
       <div className="max-w-2xl mx-auto text-center">
-        <h1 className="text-4xl font-serif italic mb-3">Order Placed</h1>
+        <h1 className="text-4xl font-serif italic mb-3">
+          {order.paymentStatus === "paid" ? "Payment Received" : "Order Placed"}
+        </h1>
         <p className="text-gray-600 mb-2">Reference: {order.orderRef}</p>
         <p className="text-gray-600">
-          We&apos;ve saved your order. Send it to us on WhatsApp to confirm delivery and payment.
+          {order.paymentStatus === "paid"
+            ? "Thank you! We'll get your order ready for delivery."
+            : "Complete your payment below to confirm your order."}
         </p>
 
-        <WhatsAppRedirect url={waUrl} />
+        {order.paymentStatus !== "paid" && (
+          <div className="mt-8 max-w-xs mx-auto">
+            <RazorpayPayButton
+              orderId={order.id}
+              orderRef={order.orderRef}
+              customerName={order.deliveryAddressSnapshot.fullName}
+              customerPhone={order.deliveryAddressSnapshot.phone}
+            />
+          </div>
+        )}
 
         <div className="mt-10 bg-white border border-gray-200 rounded-xl p-6 text-left">
           <h2 className="text-lg font-semibold mb-4">Order Details</h2>

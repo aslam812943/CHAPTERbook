@@ -19,6 +19,7 @@ import { ReviewService } from "./application/services/ReviewService";
 import { BookRequestService } from "./application/services/BookRequestService";
 import { OrderService } from "./application/services/OrderService";
 import { AdminOrderService } from "./application/services/AdminOrderService";
+import { PaymentService } from "./application/services/PaymentService";
 import { CategoryService } from "./application/services/CategoryService";
 import { AuthorService } from "./application/services/AuthorService";
 import { AuthController } from "./presentation/controllers/AuthController";
@@ -31,6 +32,7 @@ import { BookRequestController } from "./presentation/controllers/BookRequestCon
 import { AdminBookRequestController } from "./presentation/controllers/AdminBookRequestController";
 import { OrderController } from "./presentation/controllers/OrderController";
 import { AdminOrderController } from "./presentation/controllers/AdminOrderController";
+import { PaymentController } from "./presentation/controllers/PaymentController";
 import { CategoryController } from "./presentation/controllers/CategoryController";
 import { AuthorController } from "./presentation/controllers/AuthorController";
 import { buildAuthRouter } from "./presentation/routes/auth.routes";
@@ -43,6 +45,7 @@ import { buildBookRequestRouter } from "./presentation/routes/bookRequest.routes
 import { buildAdminBookRequestRouter } from "./presentation/routes/adminBookRequest.routes";
 import { buildOrderRouter } from "./presentation/routes/order.routes";
 import { buildAdminOrderRouter } from "./presentation/routes/adminOrder.routes";
+import { buildPaymentRouter } from "./presentation/routes/payment.routes";
 import { buildCategoryRouter } from "./presentation/routes/category.routes";
 import { buildAuthorRouter } from "./presentation/routes/author.routes";
 
@@ -74,6 +77,7 @@ function buildContainer() {
   const bookRequestService = new BookRequestService(bookRequestRepository, userRepository, bookRepository);
   const orderService = new OrderService(orderRepository, cartRepository, cartService);
   const adminOrderService = new AdminOrderService(orderRepository);
+  const paymentService = new PaymentService(orderRepository);
   const categoryService = new CategoryService(categoryRepository);
 
   const authController = new AuthController(authService);
@@ -86,6 +90,7 @@ function buildContainer() {
   const adminBookRequestController = new AdminBookRequestController(bookRequestService);
   const orderController = new OrderController(orderService);
   const adminOrderController = new AdminOrderController(adminOrderService);
+  const paymentController = new PaymentController(paymentService);
   const categoryController = new CategoryController(categoryService);
   const authorController = new AuthorController(authorService);
 
@@ -100,6 +105,7 @@ function buildContainer() {
     adminBookRequestController,
     orderController,
     adminOrderController,
+    paymentController,
     categoryController,
     authorController,
   };
@@ -117,6 +123,7 @@ export function buildApiRouter(): Router {
     adminBookRequestController,
     orderController,
     adminOrderController,
+    paymentController,
     categoryController,
     authorController,
   } = buildContainer();
@@ -132,6 +139,7 @@ export function buildApiRouter(): Router {
   router.use("/reviews", buildReviewRouter(reviewController));
   router.use("/book-requests", buildBookRequestRouter(bookRequestController));
   router.use("/orders", buildOrderRouter(orderController));
+  router.use("/payments", buildPaymentRouter(paymentController));
   router.use("/categories", buildCategoryRouter(categoryController));
   router.use("/authors", buildAuthorRouter(authorController));
 

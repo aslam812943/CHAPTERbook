@@ -70,14 +70,7 @@ function HeroWelcomeContent() {
         </p>
 
         <h1 className="text-white text-4xl sm:text-5xl md:text-7xl font-extrabold tracking-tight mb-5 drop-shadow-2xl">
-          <span className="md:hidden flex flex-wrap items-center justify-start gap-x-3">
-            <AnimatedText text="Explore Your" />
-            <span className="text-accent">
-              <AnimatedText text="Book" />
-            </span>
-            <AnimatedText text="World" />
-          </span>
-          <span className="hidden md:flex flex-wrap items-center justify-start gap-x-3">
+          <span className="flex flex-wrap items-center justify-start gap-x-3">
             <AnimatedText text="Chapter" />
             <span className="text-accent">
               <AnimatedText text="Book" />

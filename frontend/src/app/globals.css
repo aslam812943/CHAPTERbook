@@ -32,7 +32,7 @@
   --color-wood-mid: var(--wood-mid);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-serif: var(--font-playfair);
+  --font-serif: var(--font-eb-garamond);
 }
 
 @media (prefers-color-scheme: dark) {

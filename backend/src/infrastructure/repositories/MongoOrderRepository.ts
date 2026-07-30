@@ -24,6 +24,9 @@ function toDomain(doc: OrderDocument): Order {
     },
     status: doc.status,
     whatsappMessage: doc.whatsappMessage,
+    paymentStatus: doc.paymentStatus,
+    razorpayOrderId: doc.razorpayOrderId,
+    razorpayPaymentId: doc.razorpayPaymentId,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
@@ -57,6 +60,25 @@ export class MongoOrderRepository implements IOrderRepository {
 
   async updateStatus(id: string, status: OrderStatus): Promise<Order | null> {
     const doc = await OrderModel.findByIdAndUpdate(id, { status }, { new: true });
+    return doc ? toDomain(doc) : null;
+  }
+
+  async setRazorpayOrderId(id: string, razorpayOrderId: string): Promise<Order | null> {
+    const doc = await OrderModel.findByIdAndUpdate(id, { razorpayOrderId }, { new: true });
+    return doc ? toDomain(doc) : null;
+  }
+
+  async findByRazorpayOrderId(razorpayOrderId: string): Promise<Order | null> {
+    const doc = await OrderModel.findOne({ razorpayOrderId });
+    return doc ? toDomain(doc) : null;
+  }
+
+  async markPaid(id: string, razorpayPaymentId: string): Promise<Order | null> {
+    const doc = await OrderModel.findByIdAndUpdate(
+      id,
+      { paymentStatus: "paid", razorpayPaymentId },
+      { new: true }
+    );
     return doc ? toDomain(doc) : null;
   }
 

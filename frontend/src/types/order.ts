@@ -1,6 +1,7 @@
 import { Address } from "./user";
 
 export type OrderStatus = "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
+export type PaymentStatus = "unpaid" | "paid" | "failed";
 
 export interface OrderItem {
   bookId: string;
@@ -18,6 +19,7 @@ export interface Order {
   deliveryAddressSnapshot: Address;
   status: OrderStatus;
   whatsappMessage: string;
+  paymentStatus: PaymentStatus;
   createdAt: string;
   updatedAt: string;
 }
