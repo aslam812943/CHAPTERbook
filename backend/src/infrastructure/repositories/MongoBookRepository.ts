@@ -25,6 +25,10 @@ function toDomain(doc: BookDocument): Book {
     price: doc.price,
     discountPercentage: doc.discountPercentage,
     finalPrice: doc.finalPrice,
+    // Safe default - the repository has no notion of offers. BookService
+    // overrides these with the real offer-aware computation after fetching.
+    effectiveDiscountPercentage: doc.discountPercentage,
+    effectiveFinalPrice: doc.finalPrice,
     stock: doc.stock,
     categoryIds: doc.categoryIds.map((id) => id.toString()),
     language: doc.language,
@@ -81,5 +85,18 @@ export class MongoBookRepository implements IBookRepository {
   async delete(id: string): Promise<boolean> {
     const result = await BookModel.findByIdAndDelete(id);
     return result !== null;
+  }
+
+  async decrementStock(bookId: string, quantity: number): Promise<void> {
+    await BookModel.updateOne({ _id: bookId }, { $inc: { stock: -quantity } });
+    // Defensive clamp - shouldn't normally trigger since CartService already
+    // checks stock before allowing checkout, but if two payments for the
+    // last unit both land in a tight enough window to both pass that
+    // earlier check, this stops the stored count from going negative.
+    await BookModel.updateOne({ _id: bookId, stock: { $lt: 0 } }, { $set: { stock: 0 } });
+  }
+
+  async incrementStock(bookId: string, quantity: number): Promise<void> {
+    await BookModel.updateOne({ _id: bookId }, { $inc: { stock: quantity } });
   }
 }

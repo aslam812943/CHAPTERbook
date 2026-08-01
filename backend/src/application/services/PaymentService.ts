@@ -1,6 +1,8 @@
 import crypto from "crypto";
 import Razorpay from "razorpay";
 import { IOrderRepository } from "../../domain/repositories/IOrderRepository";
+import { IBookRepository } from "../../domain/repositories/IBookRepository";
+import { Order } from "../../domain/entities/Order";
 import { NotFoundError, ValidationError } from "../../shared/errors/AppError";
 import { env } from "../../config/env";
 
@@ -23,13 +25,56 @@ function safeCompare(a: string, b: string): boolean {
 }
 
 export class PaymentService {
-  private readonly razorpay: Razorpay;
+  // Built lazily, not in the constructor - the Razorpay SDK throws
+  // synchronously if key_id is empty, and this service is constructed
+  // eagerly at server boot (container.ts, inside buildApiRouter()). An
+  // eager throw here would fail the *entire* API - auth, books, cart,
+  // everything - not just payments, the moment RAZORPAY_KEY_ID is unset.
+  // That directly contradicts env.ts's own comment that a missing
+  // Razorpay config "doesn't take down the whole server."
+  private razorpayClient: Razorpay | null | undefined;
 
-  constructor(private readonly orderRepository: IOrderRepository) {
-    this.razorpay = new Razorpay({
-      key_id: env.RAZORPAY_KEY_ID,
-      key_secret: env.RAZORPAY_KEY_SECRET,
-    });
+  constructor(
+    private readonly orderRepository: IOrderRepository,
+    private readonly bookRepository: IBookRepository
+  ) {}
+
+  private getRazorpay(): Razorpay {
+    if (this.razorpayClient === undefined) {
+      try {
+        this.razorpayClient = new Razorpay({
+          key_id: env.RAZORPAY_KEY_ID,
+          key_secret: env.RAZORPAY_KEY_SECRET,
+        });
+      } catch {
+        this.razorpayClient = null;
+      }
+    }
+    if (!this.razorpayClient) {
+      throw new ValidationError("Payment gateway is not configured yet");
+    }
+    return this.razorpayClient;
+  }
+
+  // Stock is only ever checked (not reserved) up through checkout, so this
+  // is the actual moment inventory is committed - tied to the same
+  // paymentStatus guard that already makes markPaid idempotent, so a
+  // retried webhook or a race between verifyPayment and handleWebhook for
+  // the same order can never decrement twice.
+  private async decrementStockForOrder(order: Order): Promise<void> {
+    await Promise.all(order.items.map((item) => this.bookRepository.decrementStock(item.bookId, item.quantity)));
+  }
+
+  // Payment is real proof the order is legitimate - advance it out of
+  // "pending" automatically so it's no longer hidden from the customer's
+  // own order history (which filters out pending orders), rather than
+  // leaving a genuinely paid order invisible until an admin happens to
+  // touch it. Guarded so it never clobbers a status an admin has already
+  // moved further along (e.g. if this somehow ran after shipping began).
+  private async confirmIfPending(order: Order): Promise<void> {
+    if (order.status === "pending") {
+      await this.orderRepository.updateStatus(order.id, "confirmed");
+    }
   }
 
   async createRazorpayOrder(userId: string, orderId: string): Promise<CreateRazorpayOrderResult> {
@@ -42,20 +87,33 @@ export class PaymentService {
     }
 
     const amountInPaise = Math.round(order.totalAmount * 100);
-    const razorpayOrder = await this.razorpay.orders.create({
-      amount: amountInPaise,
-      currency: "INR",
-      receipt: order.orderRef,
-    });
 
-    await this.orderRepository.setRazorpayOrderId(order.id, razorpayOrder.id);
+    // Reuse an existing, still-unpaid Razorpay order instead of always
+    // minting a new one. Without this, a double-click (or a UI bug that
+    // re-enables the button while a modal is still open) creates a second
+    // Razorpay order and overwrites the order's single razorpayOrderId
+    // field - if the customer then completes payment on the now-stale
+    // first modal, Razorpay captures real money but neither verifyPayment
+    // nor the webhook can find a matching order anymore, since the id on
+    // record has already changed.
+    const razorpayOrderId = order.razorpayOrderId ?? (await this.createRemoteOrder(amountInPaise, order.orderRef, order.id));
 
     return {
-      razorpayOrderId: razorpayOrder.id,
+      razorpayOrderId,
       amount: amountInPaise,
       currency: "INR",
       keyId: env.RAZORPAY_KEY_ID,
     };
+  }
+
+  private async createRemoteOrder(amountInPaise: number, orderRef: string, orderId: string): Promise<string> {
+    const razorpayOrder = await this.getRazorpay().orders.create({
+      amount: amountInPaise,
+      currency: "INR",
+      receipt: orderRef,
+    });
+    await this.orderRepository.setRazorpayOrderId(orderId, razorpayOrder.id);
+    return razorpayOrder.id;
   }
 
   // This is the fast-path confirmation triggered by the browser right after
@@ -88,6 +146,8 @@ export class PaymentService {
 
     if (order.paymentStatus !== "paid") {
       await this.orderRepository.markPaid(order.id, razorpayPaymentId);
+      await this.decrementStockForOrder(order);
+      await this.confirmIfPending(order);
     }
   }
 
@@ -114,7 +174,12 @@ export class PaymentService {
       throw new ValidationError("Invalid webhook signature");
     }
 
-    const event = JSON.parse(rawBody.toString("utf8"));
+    let event: { event?: string; payload?: { payment?: { entity?: { order_id?: string; id?: string } } } };
+    try {
+      event = JSON.parse(rawBody.toString("utf8"));
+    } catch {
+      throw new ValidationError("Malformed webhook payload");
+    }
     if (event.event !== "payment.captured") return;
 
     const payment = event.payload?.payment?.entity;
@@ -125,6 +190,8 @@ export class PaymentService {
 
     if (order.paymentStatus !== "paid") {
       await this.orderRepository.markPaid(order.id, payment.id);
+      await this.decrementStockForOrder(order);
+      await this.confirmIfPending(order);
     }
   }
 }

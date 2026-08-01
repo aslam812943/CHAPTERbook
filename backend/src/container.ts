@@ -8,6 +8,7 @@ import { MongoBookRequestRepository } from "./infrastructure/repositories/MongoB
 import { MongoOrderRepository } from "./infrastructure/repositories/MongoOrderRepository";
 import { MongoCategoryRepository } from "./infrastructure/repositories/MongoCategoryRepository";
 import { MongoAuthorRepository } from "./infrastructure/repositories/MongoAuthorRepository";
+import { MongoOfferRepository } from "./infrastructure/repositories/MongoOfferRepository";
 import { GoogleBooksProvider } from "./infrastructure/externalApis/GoogleBooksProvider";
 import { OpenLibraryProvider } from "./infrastructure/externalApis/OpenLibraryProvider";
 import { AuthService } from "./application/services/AuthService";
@@ -22,6 +23,7 @@ import { AdminOrderService } from "./application/services/AdminOrderService";
 import { PaymentService } from "./application/services/PaymentService";
 import { CategoryService } from "./application/services/CategoryService";
 import { AuthorService } from "./application/services/AuthorService";
+import { OfferService } from "./application/services/OfferService";
 import { AuthController } from "./presentation/controllers/AuthController";
 import { BookController } from "./presentation/controllers/BookController";
 import { BookLookupController } from "./presentation/controllers/BookLookupController";
@@ -35,6 +37,7 @@ import { AdminOrderController } from "./presentation/controllers/AdminOrderContr
 import { PaymentController } from "./presentation/controllers/PaymentController";
 import { CategoryController } from "./presentation/controllers/CategoryController";
 import { AuthorController } from "./presentation/controllers/AuthorController";
+import { OfferController } from "./presentation/controllers/OfferController";
 import { buildAuthRouter } from "./presentation/routes/auth.routes";
 import { buildBookRouter } from "./presentation/routes/book.routes";
 import { buildBookLookupRouter } from "./presentation/routes/bookLookup.routes";
@@ -48,6 +51,7 @@ import { buildAdminOrderRouter } from "./presentation/routes/adminOrder.routes";
 import { buildPaymentRouter } from "./presentation/routes/payment.routes";
 import { buildCategoryRouter } from "./presentation/routes/category.routes";
 import { buildAuthorRouter } from "./presentation/routes/author.routes";
+import { buildOfferRouter } from "./presentation/routes/offer.routes";
 
 // Composition root: wires concrete repositories into services, services into
 // controllers, and controllers into routers. Services only ever depend on
@@ -63,22 +67,24 @@ function buildContainer() {
   const orderRepository = new MongoOrderRepository();
   const categoryRepository = new MongoCategoryRepository();
   const authorRepository = new MongoAuthorRepository();
+  const offerRepository = new MongoOfferRepository();
 
   const googleBooksProvider = new GoogleBooksProvider();
   const openLibraryProvider = new OpenLibraryProvider();
 
   const authService = new AuthService(userRepository);
   const authorService = new AuthorService(authorRepository);
-  const bookService = new BookService(bookRepository, authorService);
+  const bookService = new BookService(bookRepository, authorService, offerRepository);
   const bookLookupService = new BookLookupService([googleBooksProvider, openLibraryProvider]);
-  const cartService = new CartService(cartRepository, bookRepository);
-  const wishlistService = new WishlistService(wishlistRepository, bookRepository);
+  const cartService = new CartService(cartRepository, bookRepository, offerRepository);
+  const wishlistService = new WishlistService(wishlistRepository, bookRepository, offerRepository);
   const reviewService = new ReviewService(reviewRepository, bookRepository, userRepository);
   const bookRequestService = new BookRequestService(bookRequestRepository, userRepository, bookRepository);
   const orderService = new OrderService(orderRepository, cartRepository, cartService);
-  const adminOrderService = new AdminOrderService(orderRepository);
-  const paymentService = new PaymentService(orderRepository);
+  const adminOrderService = new AdminOrderService(orderRepository, bookRepository);
+  const paymentService = new PaymentService(orderRepository, bookRepository);
   const categoryService = new CategoryService(categoryRepository);
+  const offerService = new OfferService(offerRepository);
 
   const authController = new AuthController(authService);
   const bookController = new BookController(bookService);
@@ -93,6 +99,7 @@ function buildContainer() {
   const paymentController = new PaymentController(paymentService);
   const categoryController = new CategoryController(categoryService);
   const authorController = new AuthorController(authorService);
+  const offerController = new OfferController(offerService);
 
   return {
     authController,
@@ -108,6 +115,7 @@ function buildContainer() {
     paymentController,
     categoryController,
     authorController,
+    offerController,
   };
 }
 
@@ -126,6 +134,7 @@ export function buildApiRouter(): Router {
     paymentController,
     categoryController,
     authorController,
+    offerController,
   } = buildContainer();
 
   const router = Router();
@@ -142,6 +151,7 @@ export function buildApiRouter(): Router {
   router.use("/payments", buildPaymentRouter(paymentController));
   router.use("/categories", buildCategoryRouter(categoryController));
   router.use("/authors", buildAuthorRouter(authorController));
+  router.use("/offers", buildOfferRouter(offerController));
 
   return router;
 }

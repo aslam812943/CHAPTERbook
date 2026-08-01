@@ -13,6 +13,9 @@ export interface OrderDocument extends Document<Types.ObjectId> {
   orderRef: string;
   userId: Types.ObjectId;
   items: OrderItemSubdocument[];
+  itemsTotal: number;
+  deliveryDistanceKm: number;
+  deliveryFee: number;
   totalAmount: number;
   deliveryAddressSnapshot: AddressSubdocument;
   status: OrderStatus;
@@ -51,6 +54,9 @@ const orderSchema = new Schema<OrderDocument>(
     orderRef: { type: String, required: true, unique: true },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     items: { type: [orderItemSchema], required: true },
+    itemsTotal: { type: Number, required: true },
+    deliveryDistanceKm: { type: Number, required: true },
+    deliveryFee: { type: Number, required: true },
     totalAmount: { type: Number, required: true },
     deliveryAddressSnapshot: { type: addressSnapshotSchema, required: true },
     status: {

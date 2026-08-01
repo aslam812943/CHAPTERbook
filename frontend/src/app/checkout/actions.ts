@@ -41,6 +41,33 @@ export async function createOrderAction(address: AddressInput, saveAddress: bool
   }
 }
 
+export interface EstimateDeliveryState {
+  success: boolean;
+  message: string;
+  distanceKm?: number;
+  deliveryFee?: number;
+}
+
+export async function estimateDeliveryAction(
+  address: Pick<AddressInput, "addressLine" | "city" | "postalCode" | "country">
+): Promise<EstimateDeliveryState> {
+  await requireUser();
+
+  try {
+    const result = await withRefresh(() =>
+      apiClient.post<{ distanceKm: number; deliveryFee: number }>("/orders/estimate-delivery", address, {
+        auth: true,
+      })
+    );
+    return { success: true, message: "", ...result };
+  } catch (err) {
+    if (err instanceof ApiError) {
+      return { success: false, message: err.message };
+    }
+    return { success: false, message: "Could not estimate delivery fee. Please try again." };
+  }
+}
+
 export interface CreatePaymentOrderState {
   success: boolean;
   message: string;

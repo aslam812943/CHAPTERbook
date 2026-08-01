@@ -6,6 +6,7 @@ const NAV_LINKS = [
   { href: "/admin/books", label: "Books", description: "Search & import titles, edit price and stock." },
   { href: "/admin/orders", label: "Orders", description: "Review WhatsApp orders and update fulfillment status." },
   { href: "/admin/categories", label: "Categories", description: "Manage genres used across the storefront." },
+  { href: "/admin/offers", label: "Offers", description: "Promotional discounts by product, category, or storewide." },
   { href: "/admin/authors", label: "Authors", description: "Manage the author directory shown on the storefront." },
   { href: "/admin/book-requests", label: "Book Requests", description: "Review titles readers have asked for." },
 ];

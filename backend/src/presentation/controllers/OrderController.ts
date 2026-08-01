@@ -9,6 +9,11 @@ export class OrderController {
     res.status(201).json(result);
   };
 
+  estimateDelivery = async (req: Request, res: Response): Promise<void> => {
+    const estimate = await this.orderService.estimateDeliveryFee(req.body);
+    res.json(estimate);
+  };
+
   listMyOrders = async (req: Request, res: Response): Promise<void> => {
     const orders = await this.orderService.listForUser(req.user!.sub);
     res.json({ orders });

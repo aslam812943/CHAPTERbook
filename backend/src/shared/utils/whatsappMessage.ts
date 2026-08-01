@@ -10,6 +10,8 @@ export function generateOrderRef(): string {
 export interface OrderMessageInput {
   orderRef: string;
   items: OrderItem[];
+  itemsTotal: number;
+  deliveryFee: number;
   totalAmount: number;
   address: Address;
 }
@@ -24,6 +26,8 @@ export function buildOrderWhatsAppMessage(input: OrderMessageInput): string {
       (item, idx) => `${idx + 1}. ${item.title} x${item.quantity} - ₹${(item.price * item.quantity).toFixed(2)}`
     ),
     "",
+    `Items Subtotal: ₹${input.itemsTotal.toFixed(2)}`,
+    `Delivery: ${input.deliveryFee > 0 ? `₹${input.deliveryFee.toFixed(2)}` : "Free"}`,
     `Total: ₹${input.totalAmount.toFixed(2)}`,
     "",
     "Deliver to:",

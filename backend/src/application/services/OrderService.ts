@@ -5,7 +5,14 @@ import { Address } from "../../domain/entities/User";
 import { CartService } from "./CartService";
 import { NotFoundError, ValidationError } from "../../shared/errors/AppError";
 import { buildOrderWhatsAppMessage, buildWhatsAppUrl, generateOrderRef } from "../../shared/utils/whatsappMessage";
+import { estimateDelivery, DeliveryEstimate } from "../../shared/utils/deliveryPricing";
 import { env } from "../../config/env";
+
+type GeocodableAddress = Pick<Address, "addressLine" | "city" | "postalCode" | "country">;
+
+function formatAddressForGeocoding(address: GeocodableAddress): string {
+  return [address.addressLine, address.city, address.postalCode, address.country].filter(Boolean).join(", ");
+}
 
 const DUPLICATE_ORDER_WINDOW_MS = 30_000;
 
@@ -48,11 +55,16 @@ export class OrderService {
       quantity: item.quantity,
     }));
 
+    const { distanceKm, deliveryFee } = await estimateDelivery(formatAddressForGeocoding(address));
+    const totalAmount = cartView.total + deliveryFee;
+
     const orderRef = generateOrderRef();
     const whatsappMessage = buildOrderWhatsAppMessage({
       orderRef,
       items,
-      totalAmount: cartView.total,
+      itemsTotal: cartView.total,
+      deliveryFee,
+      totalAmount,
       address,
     });
 
@@ -60,7 +72,10 @@ export class OrderService {
       userId,
       orderRef,
       items,
-      totalAmount: cartView.total,
+      itemsTotal: cartView.total,
+      deliveryDistanceKm: distanceKm,
+      deliveryFee,
+      totalAmount,
       deliveryAddressSnapshot: address,
       whatsappMessage,
     });
@@ -68,6 +83,10 @@ export class OrderService {
     await this.cartRepository.clear(userId);
 
     return { order, whatsappUrl: buildWhatsAppUrl(whatsappMessage, env.WHATSAPP_NUMBER) };
+  }
+
+  estimateDeliveryFee(address: GeocodableAddress): Promise<DeliveryEstimate> {
+    return estimateDelivery(formatAddressForGeocoding(address));
   }
 
   async listForUser(userId: string): Promise<Order[]> {

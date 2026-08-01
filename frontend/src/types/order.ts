@@ -15,6 +15,9 @@ export interface Order {
   orderRef: string;
   userId: string;
   items: OrderItem[];
+  itemsTotal: number;
+  deliveryDistanceKm: number;
+  deliveryFee: number;
   totalAmount: number;
   deliveryAddressSnapshot: Address;
   status: OrderStatus;

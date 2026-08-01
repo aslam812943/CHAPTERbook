@@ -109,15 +109,14 @@ export default function Footer() {
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-accent mb-5">Contact Us</h3>
             <ul className="space-y-3 text-sm">
-              <li>123 Book Street, Reading City</li>
               <li>
                 <a href={WHATSAPP_HREF} target="_blank" rel="noopener noreferrer" className="hover:text-accent transition-colors">
-                  +1 (555) 123-4567
+                 +91 6282 642 007
                 </a>
               </li>
               <li>
-                <a href="mailto:hello@chapterbookstore.example" className="hover:text-accent transition-colors">
-                  hello@chapterbookstore.example
+                <a href="mailto:chapterbookstoretvm@gmail.com" className="hover:text-accent transition-colors">
+                  chapterbookstoretvm@gmail.com
                 </a>
               </li>
             </ul>

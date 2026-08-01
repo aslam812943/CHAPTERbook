@@ -27,7 +27,7 @@ export default async function AdminOrdersPage() {
         <div className="mb-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl sm:text-4xl font-serif italic mb-2">Orders</h1>
-            <p className="text-gray-400">{total} order{total === 1 ? "" : "s"} placed via WhatsApp checkout</p>
+            <p className="text-gray-400">{total} order{total === 1 ? "" : "s"} placed</p>
           </div>
           <Link href="/admin" className="text-sm text-gray-400 hover:text-accent transition-colors">
             &larr; Dashboard
@@ -65,7 +65,14 @@ export default async function AdminOrdersPage() {
                         {item.title} x{item.quantity} - ₹{(item.price * item.quantity).toFixed(2)}
                       </p>
                     ))}
-                    <p className="text-accent font-semibold mt-2">Total: ₹{order.totalAmount.toFixed(2)}</p>
+                    <div className="mt-2 space-y-0.5">
+                      <p className="text-gray-400 text-xs">Items Subtotal: ₹{order.itemsTotal.toFixed(2)}</p>
+                      <p className="text-gray-400 text-xs">
+                        Delivery: {order.deliveryFee > 0 ? `₹${order.deliveryFee.toFixed(2)}` : "Free"}
+                        {order.deliveryDistanceKm >= 0 && ` (${order.deliveryDistanceKm} km)`}
+                      </p>
+                      <p className="text-accent font-semibold">Total: ₹{order.totalAmount.toFixed(2)}</p>
+                    </div>
                   </div>
                   <div>
                     <p className="text-gray-500 mb-1">Deliver to</p>

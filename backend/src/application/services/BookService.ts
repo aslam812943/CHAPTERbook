@@ -1,4 +1,5 @@
 import { IBookRepository } from "../../domain/repositories/IBookRepository";
+import { IOfferRepository } from "../../domain/repositories/IOfferRepository";
 import {
   Book,
   BookFilter,
@@ -9,13 +10,25 @@ import {
 } from "../../domain/entities/Book";
 import { NotFoundError } from "../../shared/errors/AppError";
 import { computeFinalPrice } from "../../shared/utils/pricing";
+import { computeEffectivePricing } from "../../shared/utils/offerPricing";
 import { AuthorService } from "./AuthorService";
 
 export class BookService {
   constructor(
     private readonly bookRepository: IBookRepository,
-    private readonly authorService: AuthorService
+    private readonly authorService: AuthorService,
+    private readonly offerRepository: IOfferRepository
   ) {}
+
+  private async withEffectivePricing(book: Book): Promise<Book> {
+    const activeOffers = await this.offerRepository.findActive();
+    return { ...book, ...computeEffectivePricing(book, activeOffers) };
+  }
+
+  private async withEffectivePricingMany(books: Book[]): Promise<Book[]> {
+    const activeOffers = await this.offerRepository.findActive();
+    return books.map((book) => ({ ...book, ...computeEffectivePricing(book, activeOffers) }));
+  }
 
   async create(input: CreateBookInput): Promise<Book> {
     const discountPercentage = input.discountPercentage ?? 0;
@@ -30,7 +43,7 @@ export class BookService {
     await this.authorService.ensureAuthorsExist(input.authors).catch((err) => {
       console.error("Failed to auto-create authors for book", book.id, err);
     });
-    return book;
+    return this.withEffectivePricing(book);
   }
 
   async getById(id: string): Promise<Book> {
@@ -38,11 +51,13 @@ export class BookService {
     if (!book) {
       throw new NotFoundError("Book not found");
     }
-    return book;
+    return this.withEffectivePricing(book);
   }
 
-  list(filter: BookFilter, pagination: Pagination): Promise<PaginatedResult<Book>> {
-    return this.bookRepository.findMany(filter, pagination);
+  async list(filter: BookFilter, pagination: Pagination): Promise<PaginatedResult<Book>> {
+    const result = await this.bookRepository.findMany(filter, pagination);
+    const items = await this.withEffectivePricingMany(result.items);
+    return { ...result, items };
   }
 
   async update(id: string, input: UpdateBookInput): Promise<Book> {
@@ -69,7 +84,7 @@ export class BookService {
       });
     }
 
-    return book;
+    return this.withEffectivePricing(book);
   }
 
   async adjustStock(id: string, stock: number): Promise<Book> {

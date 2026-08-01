@@ -1,12 +1,15 @@
 import { ICartRepository } from "../../domain/repositories/ICartRepository";
 import { IBookRepository } from "../../domain/repositories/IBookRepository";
+import { IOfferRepository } from "../../domain/repositories/IOfferRepository";
 import { Cart, CartItemView, CartView } from "../../domain/entities/Cart";
 import { ValidationError } from "../../shared/errors/AppError";
+import { computeEffectivePricing } from "../../shared/utils/offerPricing";
 
 export class CartService {
   constructor(
     private readonly cartRepository: ICartRepository,
-    private readonly bookRepository: IBookRepository
+    private readonly bookRepository: IBookRepository,
+    private readonly offerRepository: IOfferRepository
   ) {}
 
   async getCart(userId: string): Promise<CartView> {
@@ -71,19 +74,23 @@ export class CartService {
       return { items: [], total: 0 };
     }
 
-    const books = await Promise.all(cart.items.map((item) => this.bookRepository.findById(item.bookId)));
+    const [books, activeOffers] = await Promise.all([
+      Promise.all(cart.items.map((item) => this.bookRepository.findById(item.bookId))),
+      this.offerRepository.findActive(),
+    ]);
 
     const items: CartItemView[] = [];
     for (let i = 0; i < cart.items.length; i++) {
       const book = books[i];
       if (!book) continue; // book was deleted after being added to the cart
+      const { effectiveDiscountPercentage, effectiveFinalPrice } = computeEffectivePricing(book, activeOffers);
       items.push({
         bookId: cart.items[i].bookId,
         quantity: cart.items[i].quantity,
         title: book.title,
-        price: book.finalPrice,
+        price: effectiveFinalPrice,
         originalPrice: book.price,
-        discountPercentage: book.discountPercentage,
+        discountPercentage: effectiveDiscountPercentage,
         coverImageUrl: book.coverImageUrl,
         stock: book.stock,
       });

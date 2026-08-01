@@ -69,9 +69,9 @@ export default function BookSpine({ book }: BookSpineProps) {
           </div>
         )}
 
-        {book.discountPercentage > 0 && (
+        {book.effectiveDiscountPercentage > 0 && (
           <span className="absolute top-1.5 left-1.5 text-[10px] font-semibold uppercase tracking-wide bg-sale text-paper px-1.5 py-0.5 rounded-sm shadow">
-            -{book.discountPercentage}%
+            -{book.effectiveDiscountPercentage}%
           </span>
         )}
       </div>
@@ -83,8 +83,8 @@ export default function BookSpine({ book }: BookSpineProps) {
         <div className="flex items-center justify-between gap-2 mt-1.5">
           <PriceDisplay
             price={book.price}
-            discountPercentage={book.discountPercentage}
-            finalPrice={book.finalPrice}
+            discountPercentage={book.effectiveDiscountPercentage}
+            finalPrice={book.effectiveFinalPrice}
             className="text-sm"
           />
           {book.avgRating !== undefined && (

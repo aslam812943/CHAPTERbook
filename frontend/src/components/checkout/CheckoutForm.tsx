@@ -1,10 +1,16 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
-import { createOrderAction, createPaymentOrderAction, verifyPaymentAction } from "@/app/checkout/actions";
+import {
+  createOrderAction,
+  createPaymentOrderAction,
+  estimateDeliveryAction,
+  verifyPaymentAction,
+} from "@/app/checkout/actions";
 import { Address } from "@/types/user";
+import { CartView } from "@/types/cart";
 import Toast from "@/components/Toast";
 import { useToast } from "@/hooks/useToast";
 
@@ -25,36 +31,83 @@ interface RazorpaySuccessResponse {
   razorpay_signature: string;
 }
 
-const REQUIRED_FIELDS: Array<{ name: string; label: string }> = [
-  { name: "fullName", label: "Full Name" },
-  { name: "phone", label: "Phone" },
-  { name: "addressLine", label: "Delivery Address" },
-  { name: "city", label: "City" },
-  { name: "country", label: "Country" },
-];
+const DELIVERY_ESTIMATE_DEBOUNCE_MS = 800;
 
-export default function CheckoutForm({ savedAddress }: { savedAddress?: Address }) {
+export default function CheckoutForm({ cart, savedAddress }: { cart: CartView; savedAddress?: Address }) {
   const [scriptReady, setScriptReady] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [isEstimating, startEstimate] = useTransition();
+  // Separate from `isPending` on purpose: the transition's async work (create
+  // order, create payment order) finishes the moment `razorpay.open()` is
+  // called, since opening the modal isn't awaited - so `isPending` alone
+  // flips back to false while the modal is still genuinely open. Without
+  // this, a second click while that first modal is up creates a second
+  // Razorpay order for the same underlying order, and if the customer then
+  // pays on the now-stale first modal, the payment succeeds on Razorpay's
+  // side but the order record no longer points at that payment.
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const { toast, showToast } = useToast();
   const router = useRouter();
 
+  const [fullName, setFullName] = useState(savedAddress?.fullName ?? "");
+  const [phone, setPhone] = useState(savedAddress?.phone ?? "");
+  const [addressLine, setAddressLine] = useState(savedAddress?.addressLine ?? "");
+  const [city, setCity] = useState(savedAddress?.city ?? "");
+  const [postalCode, setPostalCode] = useState(savedAddress?.postalCode ?? "");
+  const [country, setCountry] = useState(savedAddress?.country ?? "");
+  const [saveAddress, setSaveAddress] = useState(false);
+
+  const [estimate, setEstimate] = useState<{ distanceKm: number; deliveryFee: number } | null>(null);
+
+  // Auto-recalculates whenever the address fields that matter for delivery
+  // are all filled in, debounced so it fires once the user pauses typing
+  // rather than on every keystroke (Nominatim's free tier is rate-limited).
+  // Any stale estimate is cleared eagerly in each field's onChange instead
+  // of here, so this effect only ever needs to fetch, never reset state.
+  useEffect(() => {
+    if (!addressLine.trim() || !city.trim() || !country.trim()) return;
+
+    const timer = setTimeout(() => {
+      startEstimate(async () => {
+        const result = await estimateDeliveryAction({
+          addressLine,
+          city,
+          postalCode: postalCode.trim() || undefined,
+          country,
+        });
+        if (result.success && result.distanceKm !== undefined && result.deliveryFee !== undefined) {
+          setEstimate({ distanceKm: result.distanceKm, deliveryFee: result.deliveryFee });
+        }
+      });
+    }, DELIVERY_ESTIMATE_DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+  }, [addressLine, city, postalCode, country]);
+
+  const itemsTotal = cart.total;
+  const totalSavings = cart.items.reduce((sum, item) => sum + (item.originalPrice - item.price) * item.quantity, 0);
+  const deliveryFee = estimate?.deliveryFee ?? 0;
+  const grandTotal = itemsTotal + deliveryFee;
+
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
 
     const address = {
-      fullName: String(formData.get("fullName") ?? "").trim(),
-      phone: String(formData.get("phone") ?? "").trim(),
-      addressLine: String(formData.get("addressLine") ?? "").trim(),
-      city: String(formData.get("city") ?? "").trim(),
-      postalCode: String(formData.get("postalCode") ?? "").trim() || undefined,
-      country: String(formData.get("country") ?? "").trim(),
+      fullName: fullName.trim(),
+      phone: phone.replace(/[\s-]/g, ""),
+      addressLine: addressLine.trim(),
+      city: city.trim(),
+      postalCode: postalCode.trim() || undefined,
+      country: country.trim(),
     };
 
-    const missing = REQUIRED_FIELDS.find(({ name }) => !formData.get(name)?.toString().trim());
-    if (missing) {
-      showToast(`${missing.label} is required.`, false);
+    if (!address.fullName || !address.phone || !address.addressLine || !address.city || !address.country) {
+      showToast("Please fill in all required fields.", false);
+      return;
+    }
+
+    if (!/^\d{10}$/.test(address.phone)) {
+      showToast("Phone number must be exactly 10 digits.", false);
       return;
     }
 
@@ -63,7 +116,7 @@ export default function CheckoutForm({ savedAddress }: { savedAddress?: Address 
       return;
     }
 
-    const saveAddress = formData.get("saveAddress") === "on";
+    if (isPaymentModalOpen) return;
 
     startTransition(async () => {
       const created = await createOrderAction(address, saveAddress);
@@ -94,6 +147,7 @@ export default function CheckoutForm({ savedAddress }: { savedAddress?: Address 
           contact: address.phone,
         },
         handler: (response: unknown) => {
+          setIsPaymentModalOpen(false);
           const result = response as RazorpaySuccessResponse;
           startTransition(async () => {
             const verified = await verifyPaymentAction(
@@ -109,6 +163,7 @@ export default function CheckoutForm({ savedAddress }: { savedAddress?: Address 
         },
         modal: {
           ondismiss: () => {
+            setIsPaymentModalOpen(false);
             showToast("Payment cancelled. You can complete payment anytime from your order.", false);
             router.push(`/checkout/confirmation/${order.id}`);
           },
@@ -119,6 +174,7 @@ export default function CheckoutForm({ savedAddress }: { savedAddress?: Address 
         showToast("Payment failed. Please try again.", false);
       });
 
+      setIsPaymentModalOpen(true);
       razorpay.open();
     });
   }
@@ -127,81 +183,152 @@ export default function CheckoutForm({ savedAddress }: { savedAddress?: Address 
     <>
       <Script src="https://checkout.razorpay.com/v1/checkout.js" onLoad={() => setScriptReady(true)} />
 
-      <form onSubmit={handleSubmit} noValidate className="space-y-5">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-            <input
-              name="fullName"
-              defaultValue={savedAddress?.fullName}
-              className="w-full bg-white border border-gray-300 rounded-md py-3 px-4 text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
-            <input
-              name="phone"
-              type="tel"
-              defaultValue={savedAddress?.phone}
-              className="w-full bg-white border border-gray-300 rounded-md py-3 px-4 text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
-            />
-          </div>
-        </div>
-
+      <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-[1fr_320px] gap-12">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Address</label>
-          <input
-            name="addressLine"
-            defaultValue={savedAddress?.addressLine}
-            placeholder="Street address, apartment, etc."
-            className="w-full bg-white border border-gray-300 rounded-md py-3 px-4 text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
-          />
+          <h1 className="text-4xl font-serif italic mb-10">Checkout</h1>
+
+          <form onSubmit={handleSubmit} noValidate className="space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                <input
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="w-full bg-white border border-gray-300 rounded-md py-3 px-4 text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="10-digit mobile number"
+                  className="w-full bg-white border border-gray-300 rounded-md py-3 px-4 text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Address</label>
+              <input
+                value={addressLine}
+                onChange={(e) => {
+                  setAddressLine(e.target.value);
+                  setEstimate(null);
+                }}
+                placeholder="Street address, apartment, etc."
+                className="w-full bg-white border border-gray-300 rounded-md py-3 px-4 text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                <input
+                  value={city}
+                  onChange={(e) => {
+                    setCity(e.target.value);
+                    setEstimate(null);
+                  }}
+                  className="w-full bg-white border border-gray-300 rounded-md py-3 px-4 text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Postal Code</label>
+                <input
+                  value={postalCode}
+                  onChange={(e) => {
+                    setPostalCode(e.target.value);
+                    setEstimate(null);
+                  }}
+                  className="w-full bg-white border border-gray-300 rounded-md py-3 px-4 text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
+                <input
+                  value={country}
+                  onChange={(e) => {
+                    setCountry(e.target.value);
+                    setEstimate(null);
+                  }}
+                  className="w-full bg-white border border-gray-300 rounded-md py-3 px-4 text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
+                />
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm text-gray-600">
+              <input
+                type="checkbox"
+                checked={saveAddress}
+                onChange={(e) => setSaveAddress(e.target.checked)}
+                className="accent-accent"
+              />
+              Save this address to my account
+            </label>
+
+            <p className="text-xs text-gray-500">
+              Placing your order saves these details, then opens a secure payment screen to complete your purchase.
+            </p>
+
+            <button
+              type="submit"
+              disabled={isPending || isPaymentModalOpen}
+              className="w-full bg-accent text-[#111] font-semibold py-4 rounded-md hover:brightness-110 transition-all disabled:opacity-60"
+            >
+              {isPending || isPaymentModalOpen ? "Processing..." : "Proceed to Payment"}
+            </button>
+          </form>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
-            <input
-              name="city"
-              defaultValue={savedAddress?.city}
-              className="w-full bg-white border border-gray-300 rounded-md py-3 px-4 text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
-            />
+        <div className="bg-white border border-gray-200 rounded-xl p-6 h-fit">
+          <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
+          <div className="space-y-3 mb-4">
+            {cart.items.map((item) => (
+              <div key={item.bookId} className="flex justify-between text-sm gap-3">
+                <span className="text-gray-600">
+                  {item.title} <span className="text-gray-400">x{item.quantity}</span>
+                  {item.discountPercentage > 0 && (
+                    <>
+                      {" "}
+                      <span className="line-through text-gray-400">₹{item.originalPrice.toFixed(2)}</span>{" "}
+                      <span className="text-accent">-{item.discountPercentage}%</span>
+                    </>
+                  )}
+                </span>
+                <span className="text-gray-800 flex-shrink-0">₹{(item.price * item.quantity).toFixed(2)}</span>
+              </div>
+            ))}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Postal Code</label>
-            <input
-              name="postalCode"
-              defaultValue={savedAddress?.postalCode}
-              className="w-full bg-white border border-gray-300 rounded-md py-3 px-4 text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
-            <input
-              name="country"
-              defaultValue={savedAddress?.country}
-              className="w-full bg-white border border-gray-300 rounded-md py-3 px-4 text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
-            />
+          <div className="border-t border-gray-200 pt-4 space-y-1.5">
+            {totalSavings > 0 && (
+              <div className="flex justify-between text-sm text-accent">
+                <span>You save</span>
+                <span>₹{totalSavings.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm text-gray-600">
+              <span>Delivery</span>
+              <span>
+                {isEstimating
+                  ? "Calculating..."
+                  : estimate
+                    ? deliveryFee > 0
+                      ? `₹${deliveryFee.toFixed(2)}`
+                      : "Free"
+                    : "Enter address"}
+              </span>
+            </div>
+            <div className="flex justify-between font-semibold pt-1.5">
+              <span>Total</span>
+              <span className="text-accent">₹{grandTotal.toFixed(2)}</span>
+            </div>
           </div>
         </div>
-
-        <label className="flex items-center gap-2 text-sm text-gray-600">
-          <input type="checkbox" name="saveAddress" className="accent-accent" />
-          Save this address to my account
-        </label>
-
-        <p className="text-xs text-gray-500">
-          Placing your order saves these details, then opens a secure payment screen to complete your purchase.
-        </p>
-
-        <button
-          type="submit"
-          disabled={isPending}
-          className="w-full bg-accent text-[#111] font-semibold py-4 rounded-md hover:brightness-110 transition-all disabled:opacity-60"
-        >
-          {isPending ? "Processing..." : "Proceed to Payment"}
-        </button>
-      </form>
+      </div>
 
       <Toast message={toast.message} visible={toast.visible} success={toast.success} />
     </>

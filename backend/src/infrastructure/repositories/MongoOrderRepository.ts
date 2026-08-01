@@ -13,6 +13,9 @@ function toDomain(doc: OrderDocument): Order {
       price: item.price,
       quantity: item.quantity,
     })),
+    itemsTotal: doc.itemsTotal,
+    deliveryDistanceKm: doc.deliveryDistanceKm,
+    deliveryFee: doc.deliveryFee,
     totalAmount: doc.totalAmount,
     deliveryAddressSnapshot: {
       fullName: doc.deliveryAddressSnapshot.fullName,

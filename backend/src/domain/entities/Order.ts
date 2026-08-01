@@ -17,6 +17,11 @@ export interface Order {
   orderRef: string;
   userId: string;
   items: OrderItem[];
+  itemsTotal: number;
+  // -1 means the delivery address couldn't be geocoded (fee still applied
+  // via a fallback tier - see deliveryPricing.ts).
+  deliveryDistanceKm: number;
+  deliveryFee: number;
   totalAmount: number;
   deliveryAddressSnapshot: Address;
   status: OrderStatus;
@@ -32,6 +37,9 @@ export interface CreateOrderInput {
   userId: string;
   orderRef: string;
   items: OrderItem[];
+  itemsTotal: number;
+  deliveryDistanceKm: number;
+  deliveryFee: number;
   totalAmount: number;
   deliveryAddressSnapshot: Address;
   whatsappMessage: string;

@@ -55,3 +55,16 @@ export const changePasswordRateLimiter = rateLimit({
   legacyHeaders: false,
   message: { message: "Too many attempts, please try again later." },
 });
+
+// Like bookSearchRateLimiter - Nominatim (OpenStreetMap's free geocoder) is
+// a shared, rate-limited third-party service with no API key. Without a
+// cap here, one authenticated user scripting rapid requests could get this
+// server's IP throttled/blocked by Nominatim, silently degrading delivery
+// fee estimation for every customer, not just the one hammering it.
+export const deliveryEstimateRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many delivery checks, please slow down." },
+});

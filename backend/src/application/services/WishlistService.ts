@@ -1,12 +1,15 @@
 import { IWishlistRepository } from "../../domain/repositories/IWishlistRepository";
 import { IBookRepository } from "../../domain/repositories/IBookRepository";
+import { IOfferRepository } from "../../domain/repositories/IOfferRepository";
 import { Wishlist, WishlistItemView, WishlistView } from "../../domain/entities/Wishlist";
 import { ValidationError } from "../../shared/errors/AppError";
+import { computeEffectivePricing } from "../../shared/utils/offerPricing";
 
 export class WishlistService {
   constructor(
     private readonly wishlistRepository: IWishlistRepository,
-    private readonly bookRepository: IBookRepository
+    private readonly bookRepository: IBookRepository,
+    private readonly offerRepository: IOfferRepository
   ) {}
 
   async getWishlist(userId: string): Promise<WishlistView> {
@@ -34,18 +37,22 @@ export class WishlistService {
       return { items: [] };
     }
 
-    const books = await Promise.all(wishlist.bookIds.map((bookId) => this.bookRepository.findById(bookId)));
+    const [books, activeOffers] = await Promise.all([
+      Promise.all(wishlist.bookIds.map((bookId) => this.bookRepository.findById(bookId))),
+      this.offerRepository.findActive(),
+    ]);
 
     const items: WishlistItemView[] = [];
     for (let i = 0; i < wishlist.bookIds.length; i++) {
       const book = books[i];
       if (!book) continue; // book was deleted after being wishlisted
+      const { effectiveDiscountPercentage, effectiveFinalPrice } = computeEffectivePricing(book, activeOffers);
       items.push({
         bookId: wishlist.bookIds[i],
         title: book.title,
-        price: book.finalPrice,
+        price: effectiveFinalPrice,
         originalPrice: book.price,
-        discountPercentage: book.discountPercentage,
+        discountPercentage: effectiveDiscountPercentage,
         coverImageUrl: book.coverImageUrl,
         stock: book.stock,
       });

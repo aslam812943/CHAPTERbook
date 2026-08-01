@@ -1,4 +1,5 @@
 import CanvasSequence from '@/components/CanvasSequence';
+import OffersHighlight from '@/components/OffersHighlight';
 import AuthorSection from '@/components/AuthorSection';
 import PromoBanners from '@/components/PromoBanners';
 import CtaSection from '@/components/CtaSection';
@@ -16,6 +17,9 @@ export default async function Home() {
           logged-in users get the static welcome hero instead, so the
           full frame sequence never even loads for them. */}
       <CanvasSequence isLoggedIn={!!session} />
+
+      {/* 2.5 Current Offers - renders nothing if there are no active offers */}
+      <OffersHighlight />
 
       {/* 3. Shop By Categories */}
       <ShopByCategory />

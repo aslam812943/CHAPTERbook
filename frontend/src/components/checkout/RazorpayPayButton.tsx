@@ -37,6 +37,11 @@ export default function RazorpayPayButton({
 }) {
   const [scriptReady, setScriptReady] = useState(false);
   const [isPending, startTransition] = useTransition();
+  // Separate from `isPending` - see CheckoutForm.tsx for why: the async
+  // setup finishes the moment razorpay.open() is called (not awaited), so
+  // isPending alone would re-enable the button while the modal is still
+  // genuinely open, letting a second click race a second payment attempt.
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paid, setPaid] = useState(false);
   const { toast, showToast } = useToast();
   const router = useRouter();
@@ -46,6 +51,8 @@ export default function RazorpayPayButton({
       showToast("Payment is still loading, try again in a moment.", false);
       return;
     }
+
+    if (isPaymentModalOpen) return;
 
     startTransition(async () => {
       const created = await createPaymentOrderAction(orderId);
@@ -66,6 +73,7 @@ export default function RazorpayPayButton({
           contact: customerPhone,
         },
         handler: (response: unknown) => {
+          setIsPaymentModalOpen(false);
           const result = response as RazorpaySuccessResponse;
           startTransition(async () => {
             const verified = await verifyPaymentAction(
@@ -84,6 +92,7 @@ export default function RazorpayPayButton({
         },
         modal: {
           ondismiss: () => {
+            setIsPaymentModalOpen(false);
             showToast("Payment cancelled.", false);
           },
         },
@@ -93,6 +102,7 @@ export default function RazorpayPayButton({
         showToast("Payment failed. Please try again.", false);
       });
 
+      setIsPaymentModalOpen(true);
       razorpay.open();
     });
   }
@@ -107,10 +117,10 @@ export default function RazorpayPayButton({
         <button
           type="button"
           onClick={handlePay}
-          disabled={isPending}
+          disabled={isPending || isPaymentModalOpen}
           className="w-full bg-ink text-paper font-semibold py-3 px-6 rounded-md hover:bg-accent hover:text-ink transition-colors disabled:opacity-60"
         >
-          {isPending ? "Processing..." : "Pay Online Now"}
+          {isPending || isPaymentModalOpen ? "Processing..." : "Pay Online Now"}
         </button>
       )}
 

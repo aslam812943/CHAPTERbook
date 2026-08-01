@@ -16,6 +16,14 @@ export interface Book {
   price: number;
   discountPercentage: number;
   finalPrice: number;
+  // Discount/price after any active offer is factored in - always populated,
+  // equal to discountPercentage/finalPrice when no offer applies. Kept
+  // separate from the book's own fields above (never overwritten) because
+  // GET /books/:id is shared by both the public product page and the admin
+  // edit form; mutating the "real" fields would risk an offer's discount
+  // getting silently re-saved as the book's own permanent discount.
+  effectiveDiscountPercentage: number;
+  effectiveFinalPrice: number;
   stock: number;
   categoryIds: string[];
   language: string;

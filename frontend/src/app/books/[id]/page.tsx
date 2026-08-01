@@ -70,10 +70,13 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
             <div className="mb-8">
               <PriceDisplay
                 price={book.price}
-                discountPercentage={book.discountPercentage}
-                finalPrice={book.finalPrice}
+                discountPercentage={book.effectiveDiscountPercentage}
+                finalPrice={book.effectiveFinalPrice}
                 className="text-3xl"
               />
+              {book.effectiveDiscountPercentage > 0 && book.effectiveDiscountPercentage !== book.discountPercentage && (
+                <p className="mt-2 text-sm font-medium text-accent">Offer applied at checkout</p>
+              )}
             </div>
 
             <div className="flex items-start gap-3">

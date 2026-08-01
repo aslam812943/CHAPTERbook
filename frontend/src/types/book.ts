@@ -14,6 +14,11 @@ export interface Book {
   price: number;
   discountPercentage: number;
   finalPrice: number;
+  // Discount/price after any active offer is factored in - always present,
+  // equal to discountPercentage/finalPrice when no offer applies. Use these
+  // (not the raw fields above) anywhere customer-facing pricing is shown.
+  effectiveDiscountPercentage: number;
+  effectiveFinalPrice: number;
   stock: number;
   categoryIds: string[];
   language: string;

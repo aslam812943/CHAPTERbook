@@ -39,7 +39,7 @@ export default async function ShopByCategory() {
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
           <div>
             <SectionEyebrow className="mb-4">Browse</SectionEyebrow>
-            <h2 className="text-3xl md:text-4xl font-serif italic text-ink">Shop By Categories</h2>
+            <h2 className="text-3xl md:text-4xl font-heading font-bold not-italic text-ink">Shop By Categories</h2>
             <p className="text-gray-600 mt-3 max-w-md">Explore our top picks, sorted by what you love to read.</p>
           </div>
           <Link href="/shop" className="text-sm text-ink/70 hover:text-accent transition-colors whitespace-nowrap">

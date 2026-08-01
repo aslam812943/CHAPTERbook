@@ -60,9 +60,19 @@ export default async function OrderConfirmationPage({
               </div>
             ))}
           </div>
-          <div className="flex justify-between border-t border-gray-200 pt-4 font-semibold">
-            <span>Total</span>
-            <span className="text-accent">₹{order.totalAmount.toFixed(2)}</span>
+          <div className="border-t border-gray-200 pt-4 space-y-1.5">
+            <div className="flex justify-between text-sm text-gray-600">
+              <span>Items Subtotal</span>
+              <span>₹{order.itemsTotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm text-gray-600">
+              <span>Delivery</span>
+              <span>{order.deliveryFee > 0 ? `₹${order.deliveryFee.toFixed(2)}` : "Free"}</span>
+            </div>
+            <div className="flex justify-between font-semibold pt-1.5">
+              <span>Total</span>
+              <span className="text-accent">₹{order.totalAmount.toFixed(2)}</span>
+            </div>
           </div>
         </div>
 

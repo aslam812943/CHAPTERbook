@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Book } from "@/types/book";
 import { Category } from "@/types/category";
 import { Author } from "@/types/author";
+import { Offer } from "@/types/offer";
 import ShelfRow from "./ShelfRow";
 import BookSpine from "./BookSpine";
 
@@ -18,22 +19,35 @@ interface ShelfGroup {
   books: Book[];
 }
 
+function bookMatchesOffer(book: Book, offer: Offer): boolean {
+  if (offer.scopeType === "all") return true;
+  if (offer.scopeType === "product") return book.id === offer.bookId;
+  return offer.categoryId !== undefined && book.categoryIds.includes(offer.categoryId);
+}
+
 export default function LibraryShelf({
   books,
   categories,
   authorFilter = null,
   authorInfo = null,
+  offers = [],
+  offerFilter = null,
 }: {
   books: Book[];
   categories: Category[];
   authorFilter?: string | null;
   authorInfo?: Author | null;
+  offers?: Offer[];
+  offerFilter?: string | null;
 }) {
   const [search, setSearch] = useState("");
   const [language, setLanguage] = useState<string | null>(null);
   const [sort, setSort] = useState<SortOption>("newest");
   const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
+  const [selectedOfferId, setSelectedOfferId] = useState<string | null>(offerFilter);
   const filterBarRef = useRef<HTMLDivElement>(null);
+
+  const selectedOffer = offers.find((o) => o.id === selectedOfferId) ?? null;
 
   const authorBooks = useMemo(() => {
     if (!authorFilter) return [];
@@ -53,17 +67,18 @@ export default function LibraryShelf({
       const matchesSearch =
         !q || book.title.toLowerCase().includes(q) || book.authors.some((a) => a.toLowerCase().includes(q));
       const matchesLanguage = !language || book.language === language;
-      return matchesSearch && matchesLanguage;
+      const matchesOffer = !selectedOffer || bookMatchesOffer(book, selectedOffer);
+      return matchesSearch && matchesLanguage && matchesOffer;
     });
 
     if (sort === "price-asc") {
-      result = [...result].sort((a, b) => a.finalPrice - b.finalPrice);
+      result = [...result].sort((a, b) => a.effectiveFinalPrice - b.effectiveFinalPrice);
     } else if (sort === "price-desc") {
-      result = [...result].sort((a, b) => b.finalPrice - a.finalPrice);
+      result = [...result].sort((a, b) => b.effectiveFinalPrice - a.effectiveFinalPrice);
     }
 
     return result;
-  }, [books, search, language, sort]);
+  }, [books, search, language, sort, selectedOffer]);
 
   const shelves = useMemo<ShelfGroup[]>(() => {
     const groups: ShelfGroup[] = categories.map((category) => ({
@@ -145,6 +160,27 @@ export default function LibraryShelf({
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-8 pt-8 pb-16">
+        {/* Offer filter - only rendered when there's at least one active offer */}
+        {offers.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <span className="text-sm text-gray-500 mr-1">Offers:</span>
+            {offers.map((offer) => (
+              <button
+                key={offer.id}
+                type="button"
+                onClick={() => setSelectedOfferId((current) => (current === offer.id ? null : offer.id))}
+                className={`text-sm px-4 py-1.5 rounded-full border transition-colors ${
+                  selectedOfferId === offer.id
+                    ? "bg-accent text-[#111] border-accent shadow-[0_2px_8px_rgba(184,134,11,0.35)]"
+                    : "bg-white border-gray-200 text-gray-600 hover:border-accent hover:text-accent"
+                }`}
+              >
+                {offer.name} &middot; -{offer.discountPercentage}%
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Filter bar */}
         <div
           ref={filterBarRef}

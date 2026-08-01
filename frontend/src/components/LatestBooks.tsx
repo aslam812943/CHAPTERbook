@@ -17,7 +17,7 @@ export default async function LatestBooks() {
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
           <div>
             <SectionEyebrow className="mb-4">New Arrivals</SectionEyebrow>
-            <h2 className="text-3xl md:text-4xl font-serif italic text-ink">Latest Additions to the Shelf</h2>
+            <h2 className="text-3xl md:text-4xl font-heading font-bold not-italic text-ink">Latest Additions to the Shelf</h2>
           </div>
           <Link
             href="/shop"
