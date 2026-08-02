@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { apiClient, ApiError } from "@/lib/dal/apiClient";
-import { getSession } from "@/lib/dal/session";
+import { getSession, SessionPayload } from "@/lib/dal/session";
 import { Book, PaginatedResult } from "@/types/book";
 import { WishlistView } from "@/types/wishlist";
 import { ReviewSummary } from "@/types/review";
@@ -72,9 +72,16 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
   const { id } = await params;
 
   let book: Book;
+  let session: SessionPayload | null;
   try {
-    const response = await apiClient.get<{ book: Book }>(`/books/${id}`, { revalidate: 300 });
-    book = response.book;
+    // session is just a cookie read (no network call), but resolving it
+    // alongside the book fetch costs nothing and avoids it being yet
+    // another link in an otherwise fully sequential chain of round-trips
+    // to a backend that might be waking up from a cold start.
+    [book, session] = await Promise.all([
+      apiClient.get<{ book: Book }>(`/books/${id}`, { revalidate: 300 }).then((r) => r.book),
+      getSession(),
+    ]);
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) {
       notFound();
@@ -82,27 +89,30 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
     throw err;
   }
 
-  const session = await getSession();
-  let wishlisted = false;
-  if (session) {
-    const { wishlist } = await apiClient.get<{ wishlist: WishlistView }>("/wishlist", { auth: true });
-    wishlisted = wishlist.items.some((item) => item.bookId === book.id);
-  }
+  // None of these three depend on each other - only on `book`/`session`,
+  // already resolved above - so they run in parallel instead of one after
+  // another. On a cold Render backend, that's the difference between
+  // waiting for roughly one round-trip's worth of latency versus three.
+  const [wishlistResult, { summary }, relatedResult] = await Promise.all([
+    session
+      ? apiClient.get<{ wishlist: WishlistView }>("/wishlist", { auth: true })
+      : Promise.resolve(null),
+    apiClient.get<{ summary: ReviewSummary }>(`/reviews?bookId=${book.id}`, { revalidate: 60 }),
+    book.categoryIds.length > 0
+      ? apiClient.get<PaginatedResult<Book>>(`/books?categoryId=${book.categoryIds[0]}&limit=9`, {
+          revalidate: 300,
+        })
+      : Promise.resolve(null),
+  ]);
 
-  const { summary } = await apiClient.get<{ summary: ReviewSummary }>(`/reviews?bookId=${book.id}`, {
-    revalidate: 60,
-  });
+  const wishlisted = wishlistResult
+    ? wishlistResult.wishlist.items.some((item) => item.bookId === book.id)
+    : false;
   const alreadyReviewed = session ? summary.reviews.some((review) => review.userId === session.sub) : false;
   const reviewBlockedReason: "login" | "duplicate" | null = !session ? "login" : alreadyReviewed ? "duplicate" : null;
-
-  let relatedBooks: Book[] = [];
-  if (book.categoryIds.length > 0) {
-    const { items } = await apiClient.get<PaginatedResult<Book>>(
-      `/books?categoryId=${book.categoryIds[0]}&limit=9`,
-      { revalidate: 300 }
-    );
-    relatedBooks = items.filter((b) => b.id !== book.id).slice(0, 8);
-  }
+  const relatedBooks: Book[] = relatedResult
+    ? relatedResult.items.filter((b) => b.id !== book.id).slice(0, 8)
+    : [];
 
   // Product structured data for rich search results (price, availability,
   // rating). JSON.stringify doesn't escape "</script>" sequences, which
