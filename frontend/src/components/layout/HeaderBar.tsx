@@ -341,11 +341,18 @@ export default function HeaderBar({
         </div>
       </div>
 
-      {/* Mobile menu panel */}
+      {/* Mobile menu panel - collapsed via max-height (not display:none) so
+          the open/close transition can animate, but that alone leaves every
+          link/button/form inside still tab-focusable and screen-reader-
+          announced even while visually collapsed, duplicating the desktop
+          nav's content for anyone not using a pointer. inert removes it from
+          focus and the accessibility tree while collapsed, without breaking
+          the height transition. */}
       <div
         className={`md:hidden overflow-hidden border-t transition-all duration-300 ease-out ${panelClasses} ${
           menuOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0 border-t-0"
         }`}
+        inert={!menuOpen}
       >
         <nav className="flex flex-col gap-1 px-4 sm:px-6 py-4 text-base">
           {links}

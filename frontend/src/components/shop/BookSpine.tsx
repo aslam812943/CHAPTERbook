@@ -2,12 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { Book } from "@/types/book";
 import PriceDisplay from "@/components/PriceDisplay";
 import StarIcon from "@/components/books/StarIcon";
+import { isOptimizableImageUrl } from "@/lib/isOptimizableImageUrl";
 
-const MotionLink = motion.create(Link);
+const MotionLink = m.create(Link);
 
 // A handful of warm, library-appropriate fallback tones for books with no
 // cover image, so an empty cover still reads as "a book" rather than a
@@ -58,8 +59,8 @@ export default function BookSpine({ book }: BookSpineProps) {
             alt={book.title}
             fill
             className="object-cover"
-            unoptimized
-            sizes="210px"
+            sizes="(max-width: 640px) 170px, (max-width: 768px) 190px, 210px"
+            unoptimized={!isOptimizableImageUrl(book.coverImageUrl)}
           />
         ) : (
           <div className={`w-full h-full ${tone} spine-fallback flex flex-col items-center justify-center p-3`}>

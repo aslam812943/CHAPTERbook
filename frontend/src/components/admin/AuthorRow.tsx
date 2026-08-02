@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { updateAuthorAction, deleteAuthorAction } from "@/app/admin/authors/actions";
 import { Author } from "@/types/author";
+import { isOptimizableImageUrl } from "@/lib/isOptimizableImageUrl";
 
 export default function AuthorRow({ author }: { author: Author }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -95,7 +96,14 @@ export default function AuthorRow({ author }: { author: Author }) {
       <div className="flex items-center gap-3 min-w-0">
         <div className="relative w-10 h-10 rounded-full overflow-hidden bg-[#111] border border-gray-800 flex-shrink-0">
           {author.imageUrl && (
-            <Image src={author.imageUrl} alt={author.name} fill className="object-cover" unoptimized />
+            <Image
+              src={author.imageUrl}
+              alt={author.name}
+              fill
+              className="object-cover"
+              sizes="40px"
+              unoptimized={!isOptimizableImageUrl(author.imageUrl)}
+            />
           )}
         </div>
         <div className="min-w-0">

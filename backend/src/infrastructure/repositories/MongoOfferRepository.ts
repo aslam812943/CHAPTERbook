@@ -23,22 +23,22 @@ export class MongoOfferRepository implements IOfferRepository {
   }
 
   async findAll(): Promise<Offer[]> {
-    const docs = await OfferModel.find().sort({ createdAt: -1 });
+    const docs = await OfferModel.find().sort({ createdAt: -1 }).lean<OfferDocument[]>();
     return docs.map(toDomain);
   }
 
   async findActive(): Promise<Offer[]> {
-    const docs = await OfferModel.find({ isActive: true });
+    const docs = await OfferModel.find({ isActive: true }).lean<OfferDocument[]>();
     return docs.map(toDomain);
   }
 
   async findById(id: string): Promise<Offer | null> {
-    const doc = await OfferModel.findById(id);
+    const doc = await OfferModel.findById(id).lean<OfferDocument>();
     return doc ? toDomain(doc) : null;
   }
 
   async update(id: string, input: UpdateOfferInput): Promise<Offer | null> {
-    const doc = await OfferModel.findByIdAndUpdate(id, input, { new: true });
+    const doc = await OfferModel.findByIdAndUpdate(id, input, { new: true }).lean<OfferDocument>();
     return doc ? toDomain(doc) : null;
   }
 

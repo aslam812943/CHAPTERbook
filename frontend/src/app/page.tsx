@@ -14,8 +14,9 @@ export default async function Home() {
   return (
     <main className="w-full bg-paper min-h-screen">
       {/* 1. Hero & 2. Library Journey (Canvas Image Sequence) combined -
-          logged-in users get the static welcome hero instead, so the
-          full frame sequence never even loads for them. */}
+          logged-in users and prefers-reduced-motion visitors get the static
+          welcome hero instead, so the full frame sequence never even loads
+          for them. */}
       <CanvasSequence isLoggedIn={!!session} />
 
       {/* 2.5 Current Offers - renders nothing if there are no active offers */}

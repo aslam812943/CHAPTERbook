@@ -46,7 +46,7 @@ export class MongoBookRepository implements IBookRepository {
   }
 
   async findById(id: string): Promise<Book | null> {
-    const doc = await BookModel.findById(id);
+    const doc = await BookModel.findById(id).lean<BookDocument>();
     return doc ? toDomain(doc) : null;
   }
 
@@ -65,7 +65,7 @@ export class MongoBookRepository implements IBookRepository {
 
     const skip = (pagination.page - 1) * pagination.limit;
     const [docs, total] = await Promise.all([
-      BookModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(pagination.limit),
+      BookModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(pagination.limit).lean<BookDocument[]>(),
       BookModel.countDocuments(query),
     ]);
 
@@ -78,7 +78,7 @@ export class MongoBookRepository implements IBookRepository {
   }
 
   async update(id: string, input: UpdateBookInput): Promise<Book | null> {
-    const doc = await BookModel.findByIdAndUpdate(id, input, { new: true });
+    const doc = await BookModel.findByIdAndUpdate(id, input, { new: true }).lean<BookDocument>();
     return doc ? toDomain(doc) : null;
   }
 

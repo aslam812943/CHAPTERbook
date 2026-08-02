@@ -18,12 +18,12 @@ function toDomain(doc: ReviewDocument): Review {
 
 export class MongoReviewRepository implements IReviewRepository {
   async findByBookId(bookId: string): Promise<Review[]> {
-    const docs = await ReviewModel.find({ bookId }).sort({ createdAt: -1 });
+    const docs = await ReviewModel.find({ bookId }).sort({ createdAt: -1 }).lean<ReviewDocument[]>();
     return docs.map(toDomain);
   }
 
   async findByUserAndBook(userId: string, bookId: string): Promise<Review | null> {
-    const doc = await ReviewModel.findOne({ userId, bookId });
+    const doc = await ReviewModel.findOne({ userId, bookId }).lean<ReviewDocument>();
     return doc ? toDomain(doc) : null;
   }
 

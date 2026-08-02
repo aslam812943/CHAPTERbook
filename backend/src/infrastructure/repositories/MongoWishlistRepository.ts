@@ -13,7 +13,7 @@ function toDomain(doc: WishlistDocument): Wishlist {
 
 export class MongoWishlistRepository implements IWishlistRepository {
   async findByUserId(userId: string): Promise<Wishlist | null> {
-    const doc = await WishlistModel.findOne({ userId });
+    const doc = await WishlistModel.findOne({ userId }).lean<WishlistDocument>();
     return doc ? toDomain(doc) : null;
   }
 
@@ -22,8 +22,8 @@ export class MongoWishlistRepository implements IWishlistRepository {
       { userId },
       { $addToSet: { bookIds: bookId } },
       { new: true, upsert: true }
-    );
-    return toDomain(doc);
+    ).lean<WishlistDocument>();
+    return toDomain(doc!);
   }
 
   async removeBook(userId: string, bookId: string): Promise<Wishlist> {
@@ -31,7 +31,7 @@ export class MongoWishlistRepository implements IWishlistRepository {
       { userId },
       { $pull: { bookIds: bookId } },
       { new: true, upsert: true }
-    );
-    return toDomain(doc);
+    ).lean<WishlistDocument>();
+    return toDomain(doc!);
   }
 }

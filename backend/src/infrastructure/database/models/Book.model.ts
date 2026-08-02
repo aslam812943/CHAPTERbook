@@ -38,7 +38,10 @@ const bookSchema = new Schema<BookDocument>(
     discountPercentage: { type: Number, required: true, min: 0, max: 100, default: 0 },
     finalPrice: { type: Number, required: true, min: 0 },
     stock: { type: Number, required: true, min: 0, default: 0 },
-    categoryIds: { type: [Schema.Types.ObjectId], ref: "Category", default: [] },
+    // Multikey index - queried on every category filter (shop page,
+    // category browse) and every "related books" lookup on the book detail
+    // page (findMany({ categoryId })).
+    categoryIds: { type: [Schema.Types.ObjectId], ref: "Category", default: [], index: true },
     language: { type: String, required: true, trim: true, default: "English" },
     source: { type: String, enum: ["google", "openlibrary", "manual"], default: "manual" },
     sourceId: { type: String },

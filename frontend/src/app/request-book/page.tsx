@@ -1,8 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/dal/session";
 import { apiClient } from "@/lib/dal/apiClient";
 import { BookRequest, BookRequestStatus } from "@/types/bookRequest";
 import RequestBookForm from "@/components/RequestBookForm";
+
+// Requires login and shows the visitor's own personal request list - a
+// crawler has no session, so there's nothing indexable here.
+export const metadata: Metadata = {
+  title: "Request a Book",
+  robots: { index: false },
+};
 
 const STATUS_STYLES: Record<BookRequestStatus, string> = {
   pending: "bg-amber-50 text-amber-700 border-amber-200",

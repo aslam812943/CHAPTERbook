@@ -15,7 +15,17 @@ interface RequestOptions {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
   auth?: boolean;
+  // Seconds to let Next.js cache this GET (ISR-style). Omit to keep the
+  // default "no-store" behavior - only opt in on public, non-personalized
+  // reads (catalog data). Never pass this alongside auth: true.
+  revalidate?: number;
 }
+
+// Render's free tier can take 30-60s to wake from a cold sleep. Without a
+// cap, a sleeping backend hangs the request (and the page render) until the
+// platform's own upstream timeout kills it with an opaque error. Callers
+// that need a fallback UI should catch ApiError/DOMException("TimeoutError").
+const REQUEST_TIMEOUT_MS = 10_000;
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -29,7 +39,10 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     method: options.method ?? "GET",
     headers,
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-    cache: "no-store",
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    ...(options.revalidate !== undefined
+      ? { next: { revalidate: options.revalidate } }
+      : { cache: "no-store" as const }),
   });
 
   const contentType = res.headers.get("content-type") ?? "";
@@ -43,7 +56,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 }
 
 export const apiClient = {
-  get: <T>(path: string, opts?: { auth?: boolean }) => request<T>(path, { method: "GET", auth: opts?.auth }),
+  get: <T>(path: string, opts?: { auth?: boolean; revalidate?: number }) =>
+    request<T>(path, { method: "GET", auth: opts?.auth, revalidate: opts?.revalidate }),
   post: <T>(path: string, body?: unknown, opts?: { auth?: boolean }) =>
     request<T>(path, { method: "POST", body, auth: opts?.auth }),
   patch: <T>(path: string, body?: unknown, opts?: { auth?: boolean }) =>

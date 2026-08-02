@@ -5,6 +5,7 @@ import { apiClient } from "@/lib/dal/apiClient";
 import { Book, PaginatedResult } from "@/types/book";
 import BookRowActions from "@/components/admin/BookRowActions";
 import PriceDisplay from "@/components/PriceDisplay";
+import { isOptimizableImageUrl } from "@/lib/isOptimizableImageUrl";
 
 export default async function AdminBooksPage() {
   await requireAdmin();
@@ -47,7 +48,14 @@ export default async function AdminBooksPage() {
                 <div className="flex items-center gap-4 min-w-0">
                   <div className="relative w-12 h-16 bg-gray-900 rounded overflow-hidden flex-shrink-0">
                     {book.coverImageUrl ? (
-                      <Image src={book.coverImageUrl} alt={book.title} fill className="object-cover" unoptimized />
+                      <Image
+                        src={book.coverImageUrl}
+                        alt={book.title}
+                        fill
+                        className="object-cover"
+                        sizes="48px"
+                        unoptimized={!isOptimizableImageUrl(book.coverImageUrl)}
+                      />
                     ) : null}
                   </div>
 

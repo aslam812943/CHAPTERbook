@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
+import { isOptimizableImageUrl } from "@/lib/isOptimizableImageUrl";
 
-const MotionLink = motion.create(Link);
+const MotionLink = m.create(Link);
 
 interface CategoryCardProps {
   name: string;
@@ -28,7 +29,8 @@ export default function CategoryCard({ name, count, coverImageUrl, className = "
             alt={name}
             fill
             className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
-            unoptimized
+            sizes="(max-width: 640px) 128px, (max-width: 768px) 33vw, 16vw"
+            unoptimized={!isOptimizableImageUrl(coverImageUrl)}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-3xl font-serif italic text-gray-300">

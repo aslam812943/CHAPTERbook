@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/dal/session";
 import { apiClient, ApiError, withRefresh } from "@/lib/dal/apiClient";
 
@@ -47,5 +48,6 @@ export async function updateBookAction(
     return { success: false, message: "Failed to update the book. Please try again." };
   }
 
+  revalidatePath("/", "layout");
   redirect("/admin/books");
 }

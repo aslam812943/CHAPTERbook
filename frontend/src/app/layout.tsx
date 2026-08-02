@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, EB_Garamond, Playfair_Display } from "next/font/google";
+import { Geist, EB_Garamond } from "next/font/google";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { HeroVisibilityProvider } from "@/components/layout/HeroVisibilityContext";
+import MotionProvider from "@/components/layout/MotionProvider";
 import "./globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
@@ -21,18 +17,26 @@ const ebGaramond = EB_Garamond({
   style: ["normal", "italic"],
 });
 
-// Bold, non-italic - used only for homepage section titles (Shop By
-// Categories, Latest Additions, etc), not the site-wide font-serif italic
-// used everywhere else (logo, page headings, admin panel).
-const playfairDisplayBold = Playfair_Display({
-  variable: "--font-playfair-bold",
-  subsets: ["latin"],
-  weight: "700",
-  style: ["normal"],
-});
+// Playfair Display Bold (homepage section titles) is intentionally NOT
+// declared here - it's only ever used on 4 homepage components, so each of
+// those loads it directly (see LatestBooks.tsx etc). Declaring it in the
+// root layout would preload and download it on every single page (admin,
+// checkout, cart...) even though ~20 of the site's 24 routes never render
+// it. next/font dedupes identical declarations at build time, so this
+// doesn't cost anything extra on the homepage itself.
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 export const metadata: Metadata = {
-  title: "Chapter Book Store | Curated Books, Delivered",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Chapter Book Store | Curated Books, Delivered",
+    // Lets any page set metadata.title = "Page Name" and get
+    // "Page Name | Chapter Book Store" for free, instead of every page
+    // sharing this exact same title (search results/browser tabs/shared
+    // links couldn't tell pages apart before this).
+    template: "%s | Chapter Book Store",
+  },
   description: "A curated bookstore. Browse the collection, add to cart, and order in minutes.",
 };
 
@@ -42,16 +46,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${ebGaramond.variable} ${playfairDisplayBold.variable} h-full antialiased`}
-    >
+    <html lang="en" className={`${geistSans.variable} ${ebGaramond.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
-        <HeroVisibilityProvider>
-          <Header />
-          {children}
-          <Footer />
-        </HeroVisibilityProvider>
+        <MotionProvider>
+          <HeroVisibilityProvider>
+            <Header />
+            {children}
+            <Footer />
+          </HeroVisibilityProvider>
+        </MotionProvider>
       </body>
     </html>
   );

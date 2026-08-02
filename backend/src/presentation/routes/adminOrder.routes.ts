@@ -22,6 +22,7 @@ export function buildAdminOrderRouter(controller: AdminOrderController): Router 
     validate(updateOrderStatusSchema),
     asyncHandler(controller.updateStatus)
   );
+  router.get("/orders/export", authenticate, requireAdmin, asyncHandler(controller.exportCsv));
 
   return router;
 }

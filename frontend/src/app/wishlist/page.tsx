@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/dal/session";
 import { apiClient } from "@/lib/dal/apiClient";
 import { WishlistView } from "@/types/wishlist";
 import WishlistItemRow from "@/components/wishlist/WishlistItemRow";
+
+export const metadata: Metadata = {
+  title: "Your Wishlist",
+  robots: { index: false },
+};
 
 export default async function WishlistPage() {
   await requireUser();

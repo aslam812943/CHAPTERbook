@@ -1,5 +1,5 @@
 'use client';
-import { motion, Variants } from 'framer-motion';
+import { m, Variants } from 'framer-motion';
 
 const container: Variants = {
   hidden: {},
@@ -30,7 +30,7 @@ interface AnimatedTextProps {
 // interfering with it.
 export default function AnimatedText({ text, className, once = true }: AnimatedTextProps) {
   return (
-    <motion.span
+    <m.span
       className={className}
       variants={container}
       initial="hidden"
@@ -38,11 +38,11 @@ export default function AnimatedText({ text, className, once = true }: AnimatedT
       viewport={{ once, margin: '-15% 0px' }}
     >
       {text.split(' ').map((w, i) => (
-        <motion.span key={i} variants={word} className="inline-block will-change-transform">
+        <m.span key={i} variants={word} className="inline-block will-change-transform">
           {w}
           {' '}
-        </motion.span>
+        </m.span>
       ))}
-    </motion.span>
+    </m.span>
   );
 }

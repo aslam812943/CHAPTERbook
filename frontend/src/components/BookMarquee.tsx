@@ -16,7 +16,6 @@ interface BookMarqueeProps {
 // keyframes backwards (CSS animation-direction: reverse) rather than
 // needing a second set of keyframes.
 export default function BookMarquee({ books, direction = "left" }: BookMarqueeProps) {
-  const track = [...books, ...books];
   const durationSeconds = books.length * 4.5;
 
   return (
@@ -28,9 +27,18 @@ export default function BookMarquee({ books, direction = "left" }: BookMarqueePr
           animationDirection: direction === "right" ? "reverse" : "normal",
         }}
       >
-        {track.map((book, i) => (
-          <BookSpine key={`${book.id}-${i}`} book={book} />
+        {books.map((book) => (
+          <BookSpine key={book.id} book={book} />
         ))}
+        {/* Second copy is purely visual, so the CSS loop (animates exactly
+            one set-width) has no seam - inert keeps it out of the tab order
+            and accessibility tree so keyboard/screen-reader users don't hit
+            every book twice. */}
+        <div className="flex items-end gap-6 sm:gap-8" inert aria-hidden="true">
+          {books.map((book) => (
+            <BookSpine key={`${book.id}-duplicate`} book={book} />
+          ))}
+        </div>
       </div>
     </div>
   );

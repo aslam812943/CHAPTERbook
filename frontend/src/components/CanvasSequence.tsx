@@ -186,8 +186,24 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
   // (unskipped, full-resolution) frame load before the mobile branch takes
   // over a moment later, wasting bandwidth on a load that gets cancelled.
   const [isMobile, setIsMobile] = useState(() => getInitialMatch('(max-width: 768px)'));
+  // Unlike isMobile above, this can't be read synchronously in the
+  // initializer: it decides which top-level tree gets rendered (static hero
+  // vs. the animated sequence), and the server has no way to know a
+  // visitor's OS motion preference. Reading it synchronously here would
+  // make the client's first render disagree with the server-rendered HTML
+  // whenever a visitor has reduced-motion enabled - a real hydration
+  // mismatch, not just a wasted-bandwidth edge case. Starting at `false`
+  // keeps the client's initial render identical to the server's; the
+  // effect below corrects it immediately after mount.
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [showEndText, setShowEndText] = useState(false);
   const frameSet = isMobile ? FRAME_SETS.mobile : FRAME_SETS.desktop;
+
+  // Logged-in visitors and anyone who's asked their OS/browser to minimize
+  // motion skip the frame sequence entirely - no frames are ever requested,
+  // no "Entering the Library..." gate, no scroll lock. They go straight to
+  // the same static welcome hero used as the load-timeout fallback below.
+  const skipToStatic = isLoggedIn || prefersReducedMotion;
 
   const imagesRef = useRef<HTMLImageElement[]>([]);
   const currentFrame = useRef(0);
@@ -196,13 +212,13 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
 
   const { setHeaderVisible, setHeroDark } = useHeroVisibility();
 
-  // Desktop: keep the header out of the way while the sequence plays, and
-  // reveal it once the sequence nears completion (tied to the same
-  // threshold as the welcome text below) - logged-in visitors go through
-  // this too now (just via the faster auto-play below instead of manual
-  // scroll), so they get the same hide-then-reveal beat. Phone keeps the
-  // header visible throughout regardless - on a small screen the animation
-  // is already the sole focus.
+  // Desktop: keep the header out of the way while the hero is on screen,
+  // whether that's the scroll-driven sequence (revealed near the end - see
+  // the GSAP timeline below) or the static skip-to-hero screen (revealed
+  // once it's scrolled out of view - see the IntersectionObserver below) -
+  // same hide-then-reveal beat either way. Phone keeps the header visible
+  // throughout regardless - on a small screen the hero is already the sole
+  // focus.
   useLayoutEffect(() => {
     if (isMobile) {
       setHeaderVisible(true);
@@ -212,30 +228,46 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
     return () => setHeaderVisible(true);
   }, [isMobile, setHeaderVisible]);
 
-  // Only the load-timeout fallback needs this on mount - it bypasses the
-  // animation entirely, so nothing else would ever tell the header to go
-  // dark. The logged-in path now plays the real animation (see below),
-  // which sets this itself once it reaches the end frame.
+  // The load-timeout fallback bypasses the animation entirely and lands
+  // straight on the end-state welcome hero, so nothing else would ever tell
+  // the header to go dark for it. Same for the static skip-to-hero screen
+  // on mobile, where the header stays visible throughout (see the layout
+  // effect above) - desktop's skip-to-hero case is handled by the
+  // dedicated scroll effect further down instead, which needs to toggle
+  // this on and off as you scroll, not just set it once.
   useEffect(() => {
-    if (!loadTimedOut) return;
+    if (!loadTimedOut && !(skipToStatic && isMobile)) return;
     setHeroDark(true);
     return () => setHeroDark(false);
-  }, [loadTimedOut, setHeroDark]);
+  }, [loadTimedOut, skipToStatic, isMobile, setHeroDark]);
 
   useEffect(() => {
-    // Initial value already comes from the lazy useState initializer above -
-    // this listener only needs to react to later changes (e.g. rotating a
-    // tablet across the breakpoint).
+    // isMobile's initial value already comes from its lazy useState
+    // initializer above - this listener only needs to react to later
+    // changes (e.g. rotating a tablet across the breakpoint).
     const mobileQuery = window.matchMedia('(max-width: 768px)');
     const mobileListener = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     mobileQuery.addEventListener('change', mobileListener);
 
+    // prefersReducedMotion, unlike isMobile, starts at a hardcoded `false`
+    // (see the state declaration above) - this reads the real value once on
+    // mount, in addition to listening for later OS-setting changes.
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(motionQuery.matches);
+    const motionListener = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    motionQuery.addEventListener('change', motionListener);
+
     return () => {
       mobileQuery.removeEventListener('change', mobileListener);
+      motionQuery.removeEventListener('change', motionListener);
     };
   }, []);
 
   useEffect(() => {
+    // No frames requested at all for a visitor going straight to the static
+    // hero - this is the whole point of skipping, not just a faster path.
+    if (skipToStatic) return;
+
     const cacheKey = isMobile ? 'mobile' : 'desktop';
     const cached = frameCache[cacheKey];
     if (cached && cached.length === buildFrameNumbers(frameSet.count, frameSet.step).length) {
@@ -320,14 +352,15 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [isMobile]);
+  }, [isMobile, skipToStatic]);
 
   // Block scrolling until every frame is loaded, so the pinned scroll
   // sequence below is guaranteed to be the first thing a user can scroll
   // into - otherwise a scroll during the load window skips straight past
   // the hero into the rest of the page before GSAP has even registered it.
+  // Never applies to a visitor going straight to the static hero.
   useEffect(() => {
-    if (isLoaded || loadTimedOut) return;
+    if (isLoaded || loadTimedOut || skipToStatic) return;
 
     const { overflow: htmlOverflow } = document.documentElement.style;
     const { overflow: bodyOverflow } = document.body.style;
@@ -338,7 +371,7 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
       document.documentElement.style.overflow = htmlOverflow;
       document.body.style.overflow = bodyOverflow;
     };
-  }, [isLoaded, loadTimedOut]);
+  }, [isLoaded, loadTimedOut, skipToStatic]);
 
   useEffect(() => {
     if (!isLoaded || !canvasRef.current || !containerRef.current) return;
@@ -432,29 +465,6 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
       }
     };
 
-    if (isLoggedIn) {
-      // Logged-in visitors still get to see the intro - just auto-played on
-      // a short timer instead of tied to manual scroll, since they don't
-      // need to scroll through it themselves to reach the payoff.
-      const progress = { value: 0 };
-      const autoplay = gsap.to(progress, {
-        value: 1,
-        duration: 2.5,
-        ease: 'power1.inOut',
-        onUpdate: () => advanceTo(Math.floor(progress.value * totalImages)),
-        onComplete: revealEnd,
-      });
-
-      return () => {
-        if (resizeTimeout) clearTimeout(resizeTimeout);
-        window.removeEventListener('resize', handleResize);
-        autoplay.kill();
-        endTextShownRef.current = false;
-        setShowEndText(false);
-        setHeroDark(false);
-      };
-    }
-
     const tl = gsap.timeline({
       scrollTrigger: {
         trigger: containerRef.current,
@@ -509,7 +519,7 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
       setShowEndText(false);
       setHeroDark(false);
     };
-  }, [isLoaded, isLoggedIn]);
+  }, [isLoaded]);
 
   // "Skip" control for the pinned scroll sequence - jumps straight to the
   // scroll position where the pin releases (GSAP's own `end`, which already
@@ -526,6 +536,9 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
   // fully out of view above the rest of the page, nothing else tells the
   // header to leave dark mode. This watches for that and hands it back to
   // the normal light header once the hero itself is no longer on screen.
+  // Animated path only - the static skip-to-hero screen has its own scroll
+  // listener below (a one-shot "not intersecting" observer can't express
+  // "toggle back on if you scroll back up", which is what that path needs).
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -540,9 +553,31 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
     return () => observer.disconnect();
   }, [setHeroDark]);
 
-  if (loadTimedOut) {
+  // Static skip-to-hero screen only (logged-in/reduced-motion desktop
+  // visitors - see the layout effect above, which hides the header
+  // unconditionally on desktop). Tracks scroll position directly instead of
+  // a one-shot IntersectionObserver, so it's symmetric: header appears once
+  // you've scrolled past this section, and goes back into hiding if you
+  // scroll back up above it - not a one-way latch that, once shown, stays
+  // shown regardless of where you scroll back to.
+  useEffect(() => {
+    if (!skipToStatic || isMobile || !containerRef.current) return;
+
+    const heroHeight = containerRef.current.offsetHeight;
+    const updateFromScroll = () => {
+      const pastHero = window.scrollY >= heroHeight;
+      setHeaderVisible(pastHero);
+      setHeroDark(!pastHero);
+    };
+
+    updateFromScroll();
+    window.addEventListener('scroll', updateFromScroll, { passive: true });
+    return () => window.removeEventListener('scroll', updateFromScroll);
+  }, [skipToStatic, isMobile, setHeaderVisible, setHeroDark]);
+
+  if (loadTimedOut || skipToStatic) {
     return (
-      <div className="w-full h-dvh relative flex items-center justify-center bg-[#F4F3EE]">
+      <div ref={containerRef} className="w-full h-dvh relative flex items-center justify-center bg-[#F4F3EE]">
         <Image
           src="/heroo.png"
           alt="Library"
@@ -577,7 +612,7 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
         ref={canvasRef}
         className="absolute top-0 left-0 w-full h-full object-cover"
       />
-      {isLoaded && !showEndText && !isLoggedIn && (
+      {isLoaded && !showEndText && (
         <button
           type="button"
           onClick={handleSkipToEnd}

@@ -1,8 +1,13 @@
 import Link from "next/link";
+import { Playfair_Display } from "next/font/google";
 import { apiClient } from "@/lib/dal/apiClient";
 import { Offer } from "@/types/offer";
 import { Category } from "@/types/category";
 import SectionEyebrow from "@/components/SectionEyebrow";
+
+// Declared here (not the root layout) so it's only preloaded/downloaded on
+// pages that actually render this component - see layout.tsx.
+const playfairDisplayBold = Playfair_Display({ subsets: ["latin"], weight: "700" });
 
 function scopeDescription(offer: Offer, categories: Category[]): string {
   if (offer.scopeType === "all") return "Storewide";
@@ -14,8 +19,8 @@ function scopeDescription(offer: Offer, categories: Category[]): string {
 
 export default async function OffersHighlight() {
   const [{ offers }, { categories }] = await Promise.all([
-    apiClient.get<{ offers: Offer[] }>("/offers/active"),
-    apiClient.get<{ categories: Category[] }>("/categories"),
+    apiClient.get<{ offers: Offer[] }>("/offers/active", { revalidate: 60 }),
+    apiClient.get<{ categories: Category[] }>("/categories", { revalidate: 300 }),
   ]);
 
   // Nothing to show at all if there's no active promotion right now, rather
@@ -26,7 +31,9 @@ export default async function OffersHighlight() {
     <section className="bg-paper px-6 md:px-8 pt-20 pb-4">
       <div className="max-w-6xl mx-auto">
         <SectionEyebrow className="mb-4">Limited Time</SectionEyebrow>
-        <h2 className="text-3xl md:text-4xl font-heading font-bold not-italic text-ink mb-8">Current Offers</h2>
+        <h2 className={`text-3xl md:text-4xl font-bold not-italic text-ink mb-8 ${playfairDisplayBold.className}`}>
+          Current Offers
+        </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
           {offers.map((offer) => (

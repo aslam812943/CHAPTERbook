@@ -35,12 +35,12 @@ export class MongoBookRequestRepository implements IBookRequestRepository {
   }
 
   async findById(id: string): Promise<BookRequest | null> {
-    const doc = await BookRequestModel.findById(id);
+    const doc = await BookRequestModel.findById(id).lean<BookRequestDocument>();
     return doc ? toDomain(doc) : null;
   }
 
   async findByUserId(userId: string): Promise<BookRequest[]> {
-    const docs = await BookRequestModel.find({ userId }).sort({ createdAt: -1 });
+    const docs = await BookRequestModel.find({ userId }).sort({ createdAt: -1 }).lean<BookRequestDocument[]>();
     return docs.map(toDomain);
   }
 
@@ -49,12 +49,12 @@ export class MongoBookRequestRepository implements IBookRequestRepository {
       userId,
       status: "pending",
       bookTitle: { $regex: `^${bookTitle.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" },
-    });
+    }).lean<BookRequestDocument>();
     return doc ? toDomain(doc) : null;
   }
 
   async list(status?: BookRequestStatus): Promise<BookRequest[]> {
-    const docs = await BookRequestModel.find(status ? { status } : {}).sort({ createdAt: -1 });
+    const docs = await BookRequestModel.find(status ? { status } : {}).sort({ createdAt: -1 }).lean<BookRequestDocument[]>();
     return docs.map(toDomain);
   }
 
@@ -73,14 +73,14 @@ export class MongoBookRequestRepository implements IBookRequestRepository {
         ...(status === "fulfilled" ? { seen: false } : {}),
       },
       { new: true }
-    );
+    ).lean<BookRequestDocument>();
     return doc ? toDomain(doc) : null;
   }
 
   async findUnseenFulfilled(userId: string): Promise<BookRequest[]> {
-    const docs = await BookRequestModel.find({ userId, status: "fulfilled", seen: false }).sort({
-      createdAt: -1,
-    });
+    const docs = await BookRequestModel.find({ userId, status: "fulfilled", seen: false })
+      .sort({ createdAt: -1 })
+      .lean<BookRequestDocument[]>();
     return docs.map(toDomain);
   }
 

@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/dal/session";
 import { apiClient } from "@/lib/dal/apiClient";
 import { Order } from "@/types/order";
+
+export const metadata: Metadata = {
+  title: "Order History",
+  robots: { index: false },
+};
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-gray-100 text-gray-700",

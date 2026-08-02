@@ -42,22 +42,22 @@ export class MongoUserRepository implements IUserRepository {
   }
 
   async findById(id: string): Promise<User | null> {
-    const doc = await UserModel.findById(id);
+    const doc = await UserModel.findById(id).lean<UserDocument>();
     return doc ? toDomain(doc) : null;
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    const doc = await UserModel.findOne({ email: email.toLowerCase() });
+    const doc = await UserModel.findOne({ email: email.toLowerCase() }).lean<UserDocument>();
     return doc ? toDomain(doc) : null;
   }
 
   async findByGoogleId(googleId: string): Promise<User | null> {
-    const doc = await UserModel.findOne({ googleId });
+    const doc = await UserModel.findOne({ googleId }).lean<UserDocument>();
     return doc ? toDomain(doc) : null;
   }
 
   async linkGoogleAccount(userId: string, googleId: string): Promise<User | null> {
-    const doc = await UserModel.findByIdAndUpdate(userId, { googleId }, { new: true });
+    const doc = await UserModel.findByIdAndUpdate(userId, { googleId }, { new: true }).lean<UserDocument>();
     return doc ? toDomain(doc) : null;
   }
 
@@ -66,9 +66,13 @@ export class MongoUserRepository implements IUserRepository {
       userId,
       { $push: { addresses: address } },
       { new: true }
-    );
+    ).lean<UserDocument>();
     return doc ? toDomain(doc) : null;
   }
+
+  // removeAddress/setDefaultAddress below intentionally do NOT use .lean() -
+  // they mutate the document in place and call .save(), which lean objects
+  // (plain JS, no Document methods) don't support.
 
   async removeAddress(userId: string, addressIndex: number): Promise<User | null> {
     const doc = await UserModel.findById(userId);

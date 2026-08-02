@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/dal/session";
 import { apiClient, ApiError, withRefresh } from "@/lib/dal/apiClient";
 import { BookLookupResult, Book } from "@/types/book";
@@ -68,5 +69,6 @@ export async function createBookAction(
     return { success: false, message: "Failed to save the book. Please try again." };
   }
 
+  revalidatePath("/", "layout");
   redirect(`/admin/books?created=${book.id}`);
 }

@@ -17,7 +17,7 @@ function toDomain(doc: CartDocument): Cart {
 
 export class MongoCartRepository implements ICartRepository {
   async findByUserId(userId: string): Promise<Cart | null> {
-    const doc = await CartModel.findOne({ userId });
+    const doc = await CartModel.findOne({ userId }).lean<CartDocument>();
     return doc ? toDomain(doc) : null;
   }
 
@@ -26,7 +26,7 @@ export class MongoCartRepository implements ICartRepository {
       { userId, "items.bookId": bookId },
       { $inc: { "items.$.quantity": quantity } },
       { new: true }
-    );
+    ).lean<CartDocument>();
 
     if (doc) return toDomain(doc);
 
@@ -34,7 +34,7 @@ export class MongoCartRepository implements ICartRepository {
       { userId },
       { $push: { items: { bookId: new Types.ObjectId(bookId), quantity } } },
       { new: true, upsert: true }
-    );
+    ).lean<CartDocument>();
 
     return toDomain(upserted!);
   }
@@ -44,7 +44,7 @@ export class MongoCartRepository implements ICartRepository {
       { userId, "items.bookId": bookId },
       { $set: { "items.$.quantity": quantity } },
       { new: true, upsert: false }
-    );
+    ).lean<CartDocument>();
 
     if (doc) return toDomain(doc);
 
@@ -52,7 +52,7 @@ export class MongoCartRepository implements ICartRepository {
       { userId },
       { $push: { items: { bookId: new Types.ObjectId(bookId), quantity } } },
       { new: true, upsert: true }
-    );
+    ).lean<CartDocument>();
 
     return toDomain(upserted!);
   }
@@ -62,7 +62,7 @@ export class MongoCartRepository implements ICartRepository {
       { userId },
       { $pull: { items: { bookId } } },
       { new: true, upsert: true }
-    );
+    ).lean<CartDocument>();
     return toDomain(doc!);
   }
 

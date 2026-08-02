@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { apiClient } from "@/lib/dal/apiClient";
 import { Book, PaginatedResult } from "@/types/book";
 import { Category } from "@/types/category";
@@ -5,6 +6,11 @@ import { Offer } from "@/types/offer";
 import { ReviewSummary } from "@/types/review";
 import { Author } from "@/types/author";
 import LibraryShelf from "@/components/shop/LibraryShelf";
+
+export const metadata: Metadata = {
+  title: "Shop All Books",
+  description: "Browse the full collection - fiction, non-fiction, and more across every genre and language.",
+};
 
 export default async function ShopPage({
   searchParams,
@@ -18,10 +24,10 @@ export default async function ShopPage({
   // browser rather than a fresh server round-trip per filter change. Fine
   // at this catalog size; would need real pagination if it grows large.
   const [{ items: books }, { categories }, { authors }, { offers }] = await Promise.all([
-    apiClient.get<PaginatedResult<Book>>("/books?limit=100"),
-    apiClient.get<{ categories: Category[] }>("/categories"),
-    apiClient.get<{ authors: Author[] }>("/authors"),
-    apiClient.get<{ offers: Offer[] }>("/offers/active"),
+    apiClient.get<PaginatedResult<Book>>("/books?limit=100", { revalidate: 300 }),
+    apiClient.get<{ categories: Category[] }>("/categories", { revalidate: 300 }),
+    apiClient.get<{ authors: Author[] }>("/authors", { revalidate: 300 }),
+    apiClient.get<{ offers: Offer[] }>("/offers/active", { revalidate: 60 }),
   ]);
 
   const authorInfo = authorFilter
@@ -34,7 +40,7 @@ export default async function ShopPage({
   const summaries = await Promise.all(
     books.map((book) =>
       apiClient
-        .get<{ summary: ReviewSummary }>(`/reviews?bookId=${book.id}`)
+        .get<{ summary: ReviewSummary }>(`/reviews?bookId=${book.id}`, { revalidate: 300 })
         .then((res) => res.summary)
         .catch(() => null)
     )

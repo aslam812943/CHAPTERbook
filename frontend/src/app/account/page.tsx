@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/dal/session";
 import { apiClient } from "@/lib/dal/apiClient";
 import { SafeUser } from "@/types/user";
 import AddressList from "@/components/account/AddressList";
 import ChangePasswordForm from "@/components/account/ChangePasswordForm";
+
+export const metadata: Metadata = {
+  title: "Your Account",
+  robots: { index: false },
+};
 
 export default async function AccountPage() {
   await requireUser();

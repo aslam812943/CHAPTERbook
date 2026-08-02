@@ -1,5 +1,5 @@
 'use client';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 
 export default function SectionEyebrow({
   children,
@@ -9,7 +9,7 @@ export default function SectionEyebrow({
   className?: string;
 }) {
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 10 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
@@ -18,6 +18,6 @@ export default function SectionEyebrow({
     >
       <span className="h-px w-8 bg-accent/60" />
       {children}
-    </motion.div>
+    </m.div>
   );
 }

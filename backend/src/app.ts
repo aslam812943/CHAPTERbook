@@ -1,3 +1,4 @@
+import compression from "compression";
 import cors from "cors";
 import express, { Express } from "express";
 import helmet from "helmet";
@@ -19,6 +20,7 @@ export function createApp(): Express {
   const allowedOrigins = env.CORS_ORIGIN.split(",").map((origin) => origin.trim());
 
   app.use(helmet());
+  app.use(compression());
   app.use(
     cors({
       origin: allowedOrigins,

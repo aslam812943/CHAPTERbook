@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import Link from "next/link";
 import { Book } from "@/types/book";
 import { Category } from "@/types/category";
@@ -10,6 +10,7 @@ import { Author } from "@/types/author";
 import { Offer } from "@/types/offer";
 import ShelfRow from "./ShelfRow";
 import BookSpine from "./BookSpine";
+import { isOptimizableImageUrl } from "@/lib/isOptimizableImageUrl";
 
 type SortOption = "newest" | "price-asc" | "price-desc";
 
@@ -266,7 +267,14 @@ export default function LibraryShelf({
             <div className="flex items-center gap-4 mb-8">
               <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-md flex-shrink-0">
                 {authorInfo?.imageUrl ? (
-                  <Image src={authorInfo.imageUrl} alt={authorInfo.name} fill className="object-cover" unoptimized />
+                  <Image
+                    src={authorInfo.imageUrl}
+                    alt={authorInfo.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 64px, 80px"
+                    unoptimized={!isOptimizableImageUrl(authorInfo.imageUrl)}
+                  />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-2xl font-serif italic text-gray-300">
                     {(authorInfo?.name ?? authorFilter).slice(0, 1)}
@@ -327,7 +335,7 @@ export default function LibraryShelf({
         ) : (
           <div className="space-y-14">
             {shelves.map((shelf) => (
-              <motion.section
+              <m.section
                 key={shelf.id}
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -348,7 +356,7 @@ export default function LibraryShelf({
                 </div>
 
                 <ShelfRow books={shelf.books} />
-              </motion.section>
+              </m.section>
             ))}
           </div>
         )}

@@ -1,9 +1,14 @@
 import Link from "next/link";
+import { Playfair_Display } from "next/font/google";
 import { apiClient } from "@/lib/dal/apiClient";
 import { Book, PaginatedResult } from "@/types/book";
 import { Category } from "@/types/category";
 import SectionEyebrow from "@/components/SectionEyebrow";
 import CategoryCard from "@/components/CategoryCard";
+
+// Declared here (not the root layout) so it's only preloaded/downloaded on
+// pages that actually render this component - see layout.tsx.
+const playfairDisplayBold = Playfair_Display({ subsets: ["latin"], weight: "700" });
 
 interface CategoryCardData {
   id: string;
@@ -14,8 +19,8 @@ interface CategoryCardData {
 
 export default async function ShopByCategory() {
   const [{ categories }, { items: books }] = await Promise.all([
-    apiClient.get<{ categories: Category[] }>("/categories"),
-    apiClient.get<PaginatedResult<Book>>("/books?limit=100"),
+    apiClient.get<{ categories: Category[] }>("/categories", { revalidate: 300 }),
+    apiClient.get<PaginatedResult<Book>>("/books?limit=100", { revalidate: 300 }),
   ]);
 
   if (categories.length === 0) return null;
@@ -39,7 +44,9 @@ export default async function ShopByCategory() {
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
           <div>
             <SectionEyebrow className="mb-4">Browse</SectionEyebrow>
-            <h2 className="text-3xl md:text-4xl font-heading font-bold not-italic text-ink">Shop By Categories</h2>
+            <h2 className={`text-3xl md:text-4xl font-bold not-italic text-ink ${playfairDisplayBold.className}`}>
+              Shop By Categories
+            </h2>
             <p className="text-gray-600 mt-3 max-w-md">Explore our top picks, sorted by what you love to read.</p>
           </div>
           <Link href="/shop" className="text-sm text-ink/70 hover:text-accent transition-colors whitespace-nowrap">

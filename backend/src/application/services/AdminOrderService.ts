@@ -3,6 +3,24 @@ import { IBookRepository } from "../../domain/repositories/IBookRepository";
 import { Order, OrderStatus, PaginatedResult, Pagination } from "../../domain/entities/Order";
 import { NotFoundError, ValidationError } from "../../shared/errors/AppError";
 import { isValidStatusTransition } from "../../shared/utils/orderStatus";
+import { buildCsv } from "../../shared/utils/csv";
+
+const EXPORT_CSV_HEADERS = [
+  "Order Ref",
+  "Date",
+  "Customer Name",
+  "Phone",
+  "Items",
+  "Items Total",
+  "Delivery Fee",
+  "Total Amount",
+  "Payment Status",
+  "Order Status",
+  "Address",
+  "City",
+  "Postal Code",
+  "Country",
+];
 
 export class AdminOrderService {
   constructor(
@@ -12,6 +30,33 @@ export class AdminOrderService {
 
   listAll(pagination: Pagination): Promise<PaginatedResult<Order>> {
     return this.orderRepository.findAll(pagination);
+  }
+
+  async exportOrdersCsv(): Promise<string> {
+    const orders = await this.orderRepository.findAllForExport();
+
+    const rows = orders.map((order) => [
+      order.orderRef,
+      order.createdAt.toISOString(),
+      order.deliveryAddressSnapshot.fullName,
+      order.deliveryAddressSnapshot.phone,
+      order.items.map((item) => `${item.title} x${item.quantity}`).join("; "),
+      // itemsTotal/deliveryFee didn't exist before the delivery-fee feature
+      // shipped - orders placed before that have neither field in the
+      // database at all, not just zero, so they need an explicit fallback
+      // rather than crashing the whole export over a handful of old rows.
+      (order.itemsTotal ?? order.totalAmount).toFixed(2),
+      (order.deliveryFee ?? 0).toFixed(2),
+      order.totalAmount.toFixed(2),
+      order.paymentStatus,
+      order.status,
+      order.deliveryAddressSnapshot.addressLine,
+      order.deliveryAddressSnapshot.city,
+      order.deliveryAddressSnapshot.postalCode ?? "",
+      order.deliveryAddressSnapshot.country,
+    ]);
+
+    return buildCsv(EXPORT_CSV_HEADERS, rows);
   }
 
   async updateStatus(orderId: string, status: OrderStatus): Promise<Order> {

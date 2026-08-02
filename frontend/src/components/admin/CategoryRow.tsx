@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { updateCategoryAction, deleteCategoryAction } from "@/app/admin/categories/actions";
 import { Category } from "@/types/category";
+import { isOptimizableImageUrl } from "@/lib/isOptimizableImageUrl";
 
 export default function CategoryRow({ category }: { category: Category }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -95,7 +96,14 @@ export default function CategoryRow({ category }: { category: Category }) {
       <div className="flex items-center gap-3 min-w-0">
         <div className="relative w-10 h-10 rounded overflow-hidden bg-[#111] border border-gray-800 flex-shrink-0">
           {category.imageUrl && (
-            <Image src={category.imageUrl} alt={category.name} fill className="object-cover" unoptimized />
+            <Image
+              src={category.imageUrl}
+              alt={category.name}
+              fill
+              className="object-cover"
+              sizes="40px"
+              unoptimized={!isOptimizableImageUrl(category.imageUrl)}
+            />
           )}
         </div>
         <div className="min-w-0">

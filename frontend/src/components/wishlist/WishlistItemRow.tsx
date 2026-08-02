@@ -7,6 +7,7 @@ import Link from "next/link";
 import { removeFromWishlistAction } from "@/app/wishlist/actions";
 import { addToCartAction } from "@/app/books/[id]/actions";
 import { WishlistItemView } from "@/types/wishlist";
+import { isOptimizableImageUrl } from "@/lib/isOptimizableImageUrl";
 
 export default function WishlistItemRow({ item }: { item: WishlistItemView }) {
   const [isRemoving, startRemove] = useTransition();
@@ -35,7 +36,14 @@ export default function WishlistItemRow({ item }: { item: WishlistItemView }) {
       <Link href={`/books/${item.bookId}`} className="flex items-center gap-4 sm:flex-1 sm:min-w-0">
         <div className="relative w-14 h-20 bg-gray-100 rounded overflow-hidden flex-shrink-0">
           {item.coverImageUrl && (
-            <Image src={item.coverImageUrl} alt={item.title} fill className="object-cover" unoptimized />
+            <Image
+              src={item.coverImageUrl}
+              alt={item.title}
+              fill
+              className="object-cover"
+              sizes="56px"
+              unoptimized={!isOptimizableImageUrl(item.coverImageUrl)}
+            />
           )}
         </div>
 

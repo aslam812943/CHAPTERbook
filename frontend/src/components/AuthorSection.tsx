@@ -3,7 +3,7 @@ import { Author } from "@/types/author";
 import AuthorCarouselRow from "@/components/AuthorCarouselRow";
 
 export default async function AuthorSection() {
-  const { authors: allAuthors } = await apiClient.get<{ authors: Author[] }>("/authors");
+  const { authors: allAuthors } = await apiClient.get<{ authors: Author[] }>("/authors", { revalidate: 300 });
   // Only show authors with a real photo here - a wall of blank
   // placeholder-letter circles isn't worth showing on the storefront, even
   // though the admin author list still shows everyone so those gaps are

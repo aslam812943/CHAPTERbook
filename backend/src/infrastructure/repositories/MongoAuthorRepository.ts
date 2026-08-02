@@ -24,27 +24,27 @@ export class MongoAuthorRepository implements IAuthorRepository {
   }
 
   async findAll(): Promise<Author[]> {
-    const docs = await AuthorModel.find().sort({ name: 1 });
+    const docs = await AuthorModel.find().sort({ name: 1 }).lean<AuthorDocument[]>();
     return docs.map(toDomain);
   }
 
   async findById(id: string): Promise<Author | null> {
-    const doc = await AuthorModel.findById(id);
+    const doc = await AuthorModel.findById(id).lean<AuthorDocument>();
     return doc ? toDomain(doc) : null;
   }
 
   async findBySlug(slug: string): Promise<Author | null> {
-    const doc = await AuthorModel.findOne({ slug });
+    const doc = await AuthorModel.findOne({ slug }).lean<AuthorDocument>();
     return doc ? toDomain(doc) : null;
   }
 
   async findByName(name: string): Promise<Author | null> {
-    const doc = await AuthorModel.findOne({ name: new RegExp(`^${escapeRegex(name.trim())}$`, "i") });
+    const doc = await AuthorModel.findOne({ name: new RegExp(`^${escapeRegex(name.trim())}$`, "i") }).lean<AuthorDocument>();
     return doc ? toDomain(doc) : null;
   }
 
   async update(id: string, input: UpdateAuthorInput): Promise<Author | null> {
-    const doc = await AuthorModel.findByIdAndUpdate(id, input, { new: true });
+    const doc = await AuthorModel.findByIdAndUpdate(id, input, { new: true }).lean<AuthorDocument>();
     return doc ? toDomain(doc) : null;
   }
 

@@ -19,7 +19,8 @@ const offerSchema = new Schema<OfferDocument>(
     categoryId: { type: Schema.Types.ObjectId, ref: "Category" },
     bookId: { type: Schema.Types.ObjectId, ref: "Book" },
     discountPercentage: { type: Number, required: true, min: 1, max: 100 },
-    isActive: { type: Boolean, required: true, default: true },
+    // Queried on every homepage/shop load (findActive({ isActive: true })).
+    isActive: { type: Boolean, required: true, default: true, index: true },
   },
   { timestamps: true }
 );

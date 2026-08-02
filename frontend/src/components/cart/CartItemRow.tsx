@@ -7,6 +7,7 @@ import { updateCartItemAction, removeCartItemAction } from "@/app/cart/actions";
 import { CartItemView } from "@/types/cart";
 import Toast from "@/components/Toast";
 import { useToast } from "@/hooks/useToast";
+import { isOptimizableImageUrl } from "@/lib/isOptimizableImageUrl";
 
 export default function CartItemRow({ item }: { item: CartItemView }) {
   const [quantity, setQuantity] = useState(item.quantity);
@@ -57,7 +58,14 @@ export default function CartItemRow({ item }: { item: CartItemView }) {
       <div className="flex items-center gap-4 sm:flex-1 sm:min-w-0">
         <div className="relative w-14 h-20 bg-gray-100 rounded overflow-hidden flex-shrink-0">
           {item.coverImageUrl && (
-            <Image src={item.coverImageUrl} alt={item.title} fill className="object-cover" unoptimized />
+            <Image
+              src={item.coverImageUrl}
+              alt={item.title}
+              fill
+              className="object-cover"
+              sizes="56px"
+              unoptimized={!isOptimizableImageUrl(item.coverImageUrl)}
+            />
           )}
         </div>
 

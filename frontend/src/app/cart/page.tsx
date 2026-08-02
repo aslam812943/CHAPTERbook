@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/dal/session";
 import { apiClient } from "@/lib/dal/apiClient";
 import { CartView } from "@/types/cart";
 import CartItemRow from "@/components/cart/CartItemRow";
+
+export const metadata: Metadata = {
+  title: "Your Cart",
+  robots: { index: false },
+};
 
 export default async function CartPage() {
   await requireUser();

@@ -7,6 +7,7 @@ export interface IOrderRepository {
   findRecentByUserAndTotal(userId: string, totalAmount: number, withinMs: number): Promise<Order | null>;
   updateStatus(id: string, status: OrderStatus): Promise<Order | null>;
   findAll(pagination: Pagination): Promise<PaginatedResult<Order>>;
+  findAllForExport(): Promise<Order[]>;
   setRazorpayOrderId(id: string, razorpayOrderId: string): Promise<Order | null>;
   findByRazorpayOrderId(razorpayOrderId: string): Promise<Order | null>;
   markPaid(id: string, razorpayPaymentId: string): Promise<Order | null>;

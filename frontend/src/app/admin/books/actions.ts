@@ -28,6 +28,7 @@ export async function updateStockAction(
   }
 
   revalidatePath("/admin/books");
+  revalidatePath("/", "layout");
   return { success: true, message: "Stock updated." };
 }
 
@@ -44,5 +45,6 @@ export async function deleteBookAction(id: string): Promise<{ success: boolean; 
   }
 
   revalidatePath("/admin/books");
+  revalidatePath("/", "layout");
   return { success: true };
 }

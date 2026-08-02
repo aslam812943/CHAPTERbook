@@ -29,9 +29,17 @@ export default async function AdminOrdersPage() {
             <h1 className="text-3xl sm:text-4xl font-serif italic mb-2">Orders</h1>
             <p className="text-gray-400">{total} order{total === 1 ? "" : "s"} placed</p>
           </div>
-          <Link href="/admin" className="text-sm text-gray-400 hover:text-accent transition-colors">
-            &larr; Dashboard
-          </Link>
+          <div className="flex items-center gap-4">
+            <a
+              href="/admin/orders/export"
+              className="text-sm font-medium px-4 py-2 bg-accent text-[#111] rounded-md hover:brightness-110 transition-all"
+            >
+              Export to Excel
+            </a>
+            <Link href="/admin" className="text-sm text-gray-400 hover:text-accent transition-colors">
+              &larr; Dashboard
+            </Link>
+          </div>
         </div>
 
         {orders.length === 0 ? (

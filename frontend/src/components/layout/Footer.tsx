@@ -10,29 +10,6 @@ const WHATSAPP_HREF = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponen
   "Hi! I have a question about a book."
 )}`;
 
-const SOCIAL_ICONS = [
-  {
-    name: "Facebook",
-    href: "#",
-    path: "M22 12a10 10 0 1 0-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.4h-1.2c-1.2 0-1.6.8-1.6 1.6V12h2.8l-.4 2.9h-2.4v7A10 10 0 0 0 22 12Z",
-  },
-  {
-    name: "X",
-    href: "#",
-    path: "M18.9 3H22l-7.2 8.2L23 21h-6.6l-5.2-6.6L5.2 21H2l7.7-8.8L1.5 3h6.8l4.7 6.1Zm-1.2 16h1.7L7.4 4.9H5.6Z",
-  },
-  {
-    name: "Instagram",
-    href: "#",
-    path: "M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3Zm5 3.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Zm4.8-3.6a1.05 1.05 0 1 1 0 2.1 1.05 1.05 0 0 1 0-2.1Z",
-  },
-  {
-    name: "YouTube",
-    href: "#",
-    path: "M23 12s0-3.6-.5-5.3a3 3 0 0 0-2.1-2C18.7 4.2 12 4.2 12 4.2s-6.7 0-8.4.5a3 3 0 0 0-2.1 2C1 8.4 1 12 1 12s0 3.6.5 5.3a3 3 0 0 0 2.1 2c1.7.5 8.4.5 8.4.5s6.7 0 8.4-.5a3 3 0 0 0 2.1-2C23 15.6 23 12 23 12ZM9.8 15.5v-7l6 3.5Z",
-  },
-] as const;
-
 export default function Footer() {
   const pathname = usePathname();
   const [showTop, setShowTop] = useState(false);
@@ -123,18 +100,6 @@ export default function Footer() {
 
             <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-accent mt-6 mb-4">Follow Us</h3>
             <div className="flex items-center gap-3">
-              {SOCIAL_ICONS.map((social) => (
-                <a
-                  key={social.name}
-                  href={social.href}
-                  aria-label={social.name}
-                  className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-accent hover:text-ink transition-colors"
-                >
-                  <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
-                    <path d={social.path} />
-                  </svg>
-                </a>
-              ))}
               <a
                 href={WHATSAPP_HREF}
                 target="_blank"

@@ -10,6 +10,7 @@ import { BookLookupResult } from "@/types/book";
 import { Category } from "@/types/category";
 import { LANGUAGE_OPTIONS } from "@/lib/languages";
 import { parsePastedBookDetails } from "@/lib/parsePastedBookDetails";
+import { isOptimizableImageUrl } from "@/lib/isOptimizableImageUrl";
 import PricingFields from "./PricingFields";
 
 // A checkbox <input name="categoryIds"> group comes back from
@@ -227,7 +228,14 @@ export default function BookImportPanel({ categories }: { categories: Category[]
             >
               <div className="relative aspect-[2/3] w-full bg-gray-900 rounded overflow-hidden">
                 {r.thumbnail ? (
-                  <Image src={r.thumbnail} alt={r.title} fill className="object-cover" unoptimized />
+                  <Image
+                    src={r.thumbnail}
+                    alt={r.title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
+                    unoptimized={!isOptimizableImageUrl(r.thumbnail)}
+                  />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs">
                     No cover
@@ -311,7 +319,14 @@ export default function BookImportPanel({ categories }: { categories: Category[]
             <div className="grid grid-cols-1 md:grid-cols-[140px_1fr] gap-6">
               <div className="relative aspect-[2/3] w-full bg-gray-900 rounded overflow-hidden">
                 {selected.thumbnail ? (
-                  <Image src={selected.thumbnail} alt={selected.title} fill className="object-cover" unoptimized />
+                  <Image
+                    src={selected.thumbnail}
+                    alt={selected.title}
+                    fill
+                    className="object-cover"
+                    sizes="140px"
+                    unoptimized={!isOptimizableImageUrl(selected.thumbnail)}
+                  />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs">
                     No cover

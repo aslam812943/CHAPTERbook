@@ -2,6 +2,7 @@ import { Router } from "express";
 import { BookController } from "../controllers/BookController";
 import { authenticate, requireAdmin } from "../middlewares/authenticate";
 import { validate } from "../middlewares/validate";
+import { publicCache } from "../middlewares/publicCache";
 import { asyncHandler } from "../../shared/utils/asyncHandler";
 import {
   adjustStockSchema,
@@ -13,8 +14,8 @@ import {
 export function buildBookRouter(controller: BookController): Router {
   const router = Router();
 
-  router.get("/", validate(listBooksSchema), asyncHandler(controller.list));
-  router.get("/:id", asyncHandler(controller.getById));
+  router.get("/", publicCache(300), validate(listBooksSchema), asyncHandler(controller.list));
+  router.get("/:id", publicCache(300), asyncHandler(controller.getById));
 
   router.post(
     "/",

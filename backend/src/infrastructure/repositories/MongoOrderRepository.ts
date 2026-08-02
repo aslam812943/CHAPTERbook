@@ -42,12 +42,12 @@ export class MongoOrderRepository implements IOrderRepository {
   }
 
   async findById(id: string): Promise<Order | null> {
-    const doc = await OrderModel.findById(id);
+    const doc = await OrderModel.findById(id).lean<OrderDocument>();
     return doc ? toDomain(doc) : null;
   }
 
   async findByUserId(userId: string): Promise<Order[]> {
-    const docs = await OrderModel.find({ userId }).sort({ createdAt: -1 });
+    const docs = await OrderModel.find({ userId }).sort({ createdAt: -1 }).lean<OrderDocument[]>();
     return docs.map(toDomain);
   }
 
@@ -57,22 +57,22 @@ export class MongoOrderRepository implements IOrderRepository {
       userId,
       totalAmount,
       createdAt: { $gte: since },
-    }).sort({ createdAt: -1 });
+    }).sort({ createdAt: -1 }).lean<OrderDocument>();
     return doc ? toDomain(doc) : null;
   }
 
   async updateStatus(id: string, status: OrderStatus): Promise<Order | null> {
-    const doc = await OrderModel.findByIdAndUpdate(id, { status }, { new: true });
+    const doc = await OrderModel.findByIdAndUpdate(id, { status }, { new: true }).lean<OrderDocument>();
     return doc ? toDomain(doc) : null;
   }
 
   async setRazorpayOrderId(id: string, razorpayOrderId: string): Promise<Order | null> {
-    const doc = await OrderModel.findByIdAndUpdate(id, { razorpayOrderId }, { new: true });
+    const doc = await OrderModel.findByIdAndUpdate(id, { razorpayOrderId }, { new: true }).lean<OrderDocument>();
     return doc ? toDomain(doc) : null;
   }
 
   async findByRazorpayOrderId(razorpayOrderId: string): Promise<Order | null> {
-    const doc = await OrderModel.findOne({ razorpayOrderId });
+    const doc = await OrderModel.findOne({ razorpayOrderId }).lean<OrderDocument>();
     return doc ? toDomain(doc) : null;
   }
 
@@ -81,14 +81,19 @@ export class MongoOrderRepository implements IOrderRepository {
       id,
       { paymentStatus: "paid", razorpayPaymentId },
       { new: true }
-    );
+    ).lean<OrderDocument>();
     return doc ? toDomain(doc) : null;
+  }
+
+  async findAllForExport(): Promise<Order[]> {
+    const docs = await OrderModel.find().sort({ createdAt: -1 }).lean<OrderDocument[]>();
+    return docs.map(toDomain);
   }
 
   async findAll(pagination: Pagination): Promise<PaginatedResult<Order>> {
     const skip = (pagination.page - 1) * pagination.limit;
     const [docs, total] = await Promise.all([
-      OrderModel.find().sort({ createdAt: -1 }).skip(skip).limit(pagination.limit),
+      OrderModel.find().sort({ createdAt: -1 }).skip(skip).limit(pagination.limit).lean<OrderDocument[]>(),
       OrderModel.countDocuments(),
     ]);
 

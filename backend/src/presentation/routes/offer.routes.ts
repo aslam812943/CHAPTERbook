@@ -2,6 +2,7 @@ import { Router } from "express";
 import { OfferController } from "../controllers/OfferController";
 import { authenticate, requireAdmin } from "../middlewares/authenticate";
 import { validate } from "../middlewares/validate";
+import { publicCache } from "../middlewares/publicCache";
 import { asyncHandler } from "../../shared/utils/asyncHandler";
 import { createOfferSchema, updateOfferSchema } from "../validators/offer.validator";
 
@@ -10,7 +11,9 @@ export function buildOfferRouter(controller: OfferController): Router {
 
   // Public - used by the homepage highlight section and the shop page's
   // offer filter, both of which should only ever see currently-active offers.
-  router.get("/active", asyncHandler(controller.listActive));
+  // Shorter cache window than books/categories since offers start/end on a
+  // schedule that isn't necessarily tied to an admin action revalidating it.
+  router.get("/active", publicCache(60), asyncHandler(controller.listActive));
 
   // Admin-only from here - the full list (including inactive offers) is
   // only useful for managing them.

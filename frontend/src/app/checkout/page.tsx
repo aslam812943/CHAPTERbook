@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/dal/session";
 import { apiClient } from "@/lib/dal/apiClient";
 import { CartView } from "@/types/cart";
 import { SafeUser } from "@/types/user";
 import CheckoutForm from "@/components/checkout/CheckoutForm";
+
+export const metadata: Metadata = {
+  title: "Checkout",
+  robots: { index: false },
+};
 
 export default async function CheckoutPage() {
   await requireUser();

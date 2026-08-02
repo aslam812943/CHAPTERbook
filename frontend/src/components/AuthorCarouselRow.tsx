@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { useDragScroll } from "@/components/shop/useDragScroll";
 import { Author } from "@/types/author";
+import { isOptimizableImageUrl } from "@/lib/isOptimizableImageUrl";
 
 export default function AuthorCarouselRow({ authors }: { authors: Author[] }) {
   const { ref, onPointerDown, onClickCapture } = useDragScroll<HTMLDivElement>();
@@ -65,7 +66,14 @@ export default function AuthorCarouselRow({ authors }: { authors: Author[] }) {
           >
             <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-md group-hover:shadow-lg transition-shadow">
               {author.imageUrl ? (
-                <Image src={author.imageUrl} alt={author.name} fill className="object-cover" unoptimized />
+                <Image
+                  src={author.imageUrl}
+                  alt={author.name}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 640px) 96px, 112px"
+                  unoptimized={!isOptimizableImageUrl(author.imageUrl)}
+                />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-2xl font-serif italic text-gray-300">
                   {author.name.slice(0, 1)}

@@ -21,22 +21,22 @@ export class MongoCategoryRepository implements ICategoryRepository {
   }
 
   async findAll(): Promise<Category[]> {
-    const docs = await CategoryModel.find().sort({ name: 1 });
+    const docs = await CategoryModel.find().sort({ name: 1 }).lean<CategoryDocument[]>();
     return docs.map(toDomain);
   }
 
   async findById(id: string): Promise<Category | null> {
-    const doc = await CategoryModel.findById(id);
+    const doc = await CategoryModel.findById(id).lean<CategoryDocument>();
     return doc ? toDomain(doc) : null;
   }
 
   async findBySlug(slug: string): Promise<Category | null> {
-    const doc = await CategoryModel.findOne({ slug });
+    const doc = await CategoryModel.findOne({ slug }).lean<CategoryDocument>();
     return doc ? toDomain(doc) : null;
   }
 
   async update(id: string, input: UpdateCategoryInput): Promise<Category | null> {
-    const doc = await CategoryModel.findByIdAndUpdate(id, input, { new: true });
+    const doc = await CategoryModel.findByIdAndUpdate(id, input, { new: true }).lean<CategoryDocument>();
     return doc ? toDomain(doc) : null;
   }
 

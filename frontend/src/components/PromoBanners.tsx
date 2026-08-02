@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 
 const BANNERS = [
   {
@@ -22,7 +22,7 @@ export default function PromoBanners() {
     <section className="pt-4 pb-16 px-4 sm:px-6 md:px-8 bg-paper">
       <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 items-stretch gap-4 sm:gap-6 md:gap-8">
         {BANNERS.map((banner) => (
-          <motion.div
+          <m.div
             key={banner.src}
             initial={{ opacity: 0, x: banner.fromX }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -41,7 +41,7 @@ export default function PromoBanners() {
                 sizes="(max-width: 768px) 50vw, 512px"
               />
             </Link>
-          </motion.div>
+          </m.div>
         ))}
       </div>
     </section>

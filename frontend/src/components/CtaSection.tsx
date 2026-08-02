@@ -1,5 +1,5 @@
 'use client';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import AnimatedText from './AnimatedText';
@@ -40,7 +40,7 @@ export default function CtaSection() {
       />
       <div className="absolute inset-0 bg-black/40 z-0"></div>
 
-      <motion.div
+      <m.div
         initial={{ scale: 0.8, opacity: 0 }}
         whileInView={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
@@ -82,13 +82,13 @@ export default function CtaSection() {
 
         <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-4 md:mb-6">
           <Link href="/shop">
-            <motion.button
+            <m.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className="inline-flex items-center gap-2 bg-ink text-white shadow-2xl ring-1 ring-white/20 px-6 py-3 md:px-8 md:py-4 rounded-full text-lg font-semibold tracking-wide hover:bg-accent hover:text-ink transition-colors duration-300"
             >
               Explore Books &rarr;
-            </motion.button>
+            </m.button>
           </Link>
 
           <Link
@@ -112,7 +112,7 @@ export default function CtaSection() {
             </div>
           ))}
         </div> */}
-      </motion.div>
+      </m.div>
     </section>
   );
 }

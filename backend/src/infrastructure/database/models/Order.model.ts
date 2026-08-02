@@ -52,7 +52,9 @@ const addressSnapshotSchema = new Schema<AddressSubdocument>(
 const orderSchema = new Schema<OrderDocument>(
   {
     orderRef: { type: String, required: true, unique: true },
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    // Queried on every "my orders" page load (findByUserId) and every
+    // duplicate-order check on checkout (findRecentByUserAndTotal).
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     items: { type: [orderItemSchema], required: true },
     itemsTotal: { type: Number, required: true },
     deliveryDistanceKm: { type: Number, required: true },
@@ -70,7 +72,9 @@ const orderSchema = new Schema<OrderDocument>(
       enum: ["unpaid", "paid", "failed"],
       default: "unpaid",
     },
-    razorpayOrderId: { type: String },
+    // Looked up on every Razorpay webhook delivery and payment verification
+    // call (findByRazorpayOrderId) - a hot path on the payment flow.
+    razorpayOrderId: { type: String, index: true },
     razorpayPaymentId: { type: String },
   },
   { timestamps: true }
