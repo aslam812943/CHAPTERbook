@@ -8,16 +8,17 @@ import { isOptimizableImageUrl } from "@/lib/isOptimizableImageUrl";
 const MotionLink = m.create(Link);
 
 interface CategoryCardProps {
+  categoryId: string;
   name: string;
   count: number;
   coverImageUrl?: string;
   className?: string;
 }
 
-export default function CategoryCard({ name, count, coverImageUrl, className = "" }: CategoryCardProps) {
+export default function CategoryCard({ categoryId, name, count, coverImageUrl, className = "" }: CategoryCardProps) {
   return (
     <MotionLink
-      href="/shop"
+      href={`/shop?category=${categoryId}`}
       className={`group block ${className}`}
       whileHover={{ y: -6 }}
       transition={{ duration: 0.25, ease: "easeOut" }}

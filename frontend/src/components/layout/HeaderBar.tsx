@@ -9,6 +9,7 @@ import { markBookRequestsSeenAction } from "@/app/request-book/actions";
 import type { SessionPayload } from "@/lib/dal/session";
 import type { BookRequest } from "@/types/bookRequest";
 import { useHeroVisibility } from "./HeroVisibilityContext";
+import { useConfirm } from "@/components/ConfirmDialogProvider";
 
 function HeaderIconLink({
   href,
@@ -134,6 +135,18 @@ export default function HeaderBar({
   const isAdminSide = pathname?.startsWith("/admin");
   const { headerVisible, heroDark } = useHeroVisibility();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isLoggingOut, startLogout] = useTransition();
+  const confirm = useConfirm();
+
+  async function handleLogout() {
+    const confirmed = await confirm({
+      title: "Log out?",
+      message: "Are you sure you want to log out?",
+      confirmLabel: "Log out",
+    });
+    if (!confirmed) return;
+    startLogout(() => logoutAction());
+  }
 
   // Only the homepage's hero animation is ever allowed to hide the header
   // (and only on desktop - see CanvasSequence). Every other page shows it
@@ -221,11 +234,14 @@ export default function HeaderBar({
               My Account
             </Link>
           )}
-          <form action={logoutAction}>
-            <button type="submit" className="hover:text-accent transition-colors cursor-pointer">
-              Logout
-            </button>
-          </form>
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="hover:text-accent transition-colors cursor-pointer disabled:opacity-60"
+          >
+            {isLoggingOut ? "Logging out..." : "Logout"}
+          </button>
         </>
       ) : (
         <>

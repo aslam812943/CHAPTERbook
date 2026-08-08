@@ -4,6 +4,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { HeroVisibilityProvider } from "@/components/layout/HeroVisibilityContext";
 import MotionProvider from "@/components/layout/MotionProvider";
+import { ConfirmDialogProvider } from "@/components/ConfirmDialogProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -49,11 +50,13 @@ export default function RootLayout({
     <html lang="en" className={`${geistSans.variable} ${ebGaramond.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <MotionProvider>
-          <HeroVisibilityProvider>
-            <Header />
-            {children}
-            <Footer />
-          </HeroVisibilityProvider>
+          <ConfirmDialogProvider>
+            <HeroVisibilityProvider>
+              <Header />
+              {children}
+              <Footer />
+            </HeroVisibilityProvider>
+          </ConfirmDialogProvider>
         </MotionProvider>
       </body>
     </html>

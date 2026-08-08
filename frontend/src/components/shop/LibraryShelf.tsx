@@ -33,6 +33,7 @@ export default function LibraryShelf({
   authorInfo = null,
   offers = [],
   offerFilter = null,
+  categoryFilter = null,
 }: {
   books: Book[];
   categories: Category[];
@@ -40,11 +41,15 @@ export default function LibraryShelf({
   authorInfo?: Author | null;
   offers?: Offer[];
   offerFilter?: string | null;
+  categoryFilter?: string | null;
 }) {
   const [search, setSearch] = useState("");
   const [language, setLanguage] = useState<string | null>(null);
   const [sort, setSort] = useState<SortOption>("newest");
-  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
+  // Seeded from ?category=<id> (e.g. clicking a category card on the
+  // homepage) so arriving here already jumps straight to that category's
+  // "View All" view instead of always landing on the full shelf list.
+  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(categoryFilter);
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(offerFilter);
   const filterBarRef = useRef<HTMLDivElement>(null);
 
@@ -248,11 +253,14 @@ export default function LibraryShelf({
         </div>
 
         <p className="text-sm text-gray-500 mb-8">
-          {authorFilter
-            ? `${authorBooks.length} book${authorBooks.length === 1 ? "" : "s"} found`
-            : expandedCategoryId && !expandedShelf
-            ? "0 books found"
-            : `${filteredBooks.length} book${filteredBooks.length === 1 ? "" : "s"} found`}
+          {(() => {
+            const count = authorFilter
+              ? authorBooks.length
+              : expandedCategoryId
+                ? (expandedShelf?.books.length ?? 0)
+                : filteredBooks.length;
+            return `${count} book${count === 1 ? "" : "s"} found`;
+          })()}
         </p>
 
         {authorFilter ? (

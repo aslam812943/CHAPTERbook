@@ -6,6 +6,7 @@ import { updateOfferAction, deleteOfferAction, toggleOfferActiveAction } from "@
 import { Offer, OfferScopeType } from "@/types/offer";
 import { Category } from "@/types/category";
 import { Book } from "@/types/book";
+import { useConfirm } from "@/components/ConfirmDialogProvider";
 
 export default function OfferRow({
   offer,
@@ -27,6 +28,7 @@ export default function OfferRow({
   const [isDeleting, startDelete] = useTransition();
   const [isToggling, startToggle] = useTransition();
   const router = useRouter();
+  const confirm = useConfirm();
 
   function startEditing() {
     setName(offer.name);
@@ -56,8 +58,14 @@ export default function OfferRow({
     });
   }
 
-  function handleDelete() {
-    if (!window.confirm(`Delete the offer "${offer.name}"?`)) return;
+  async function handleDelete() {
+    const confirmed = await confirm({
+      title: "Delete this offer?",
+      message: `Delete the offer "${offer.name}"? This can't be undone.`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!confirmed) return;
     startDelete(async () => {
       await deleteOfferAction(offer.id);
       router.refresh();

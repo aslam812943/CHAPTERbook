@@ -5,8 +5,13 @@ export class OrderController {
   constructor(private readonly orderService: OrderService) {}
 
   createOrder = async (req: Request, res: Response): Promise<void> => {
-    const result = await this.orderService.createOrder(req.user!.sub, req.body.address);
+    const result = await this.orderService.createOrder(req.user!.sub, req.body.address, req.body.paymentMethod);
     res.status(201).json(result);
+  };
+
+  cancelOrder = async (req: Request, res: Response): Promise<void> => {
+    const order = await this.orderService.cancelOrder(req.user!.sub, req.params.id);
+    res.json({ order });
   };
 
   estimateDelivery = async (req: Request, res: Response): Promise<void> => {

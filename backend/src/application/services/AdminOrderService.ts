@@ -14,6 +14,7 @@ const EXPORT_CSV_HEADERS = [
   "Items Total",
   "Delivery Fee",
   "Total Amount",
+  "Payment Method",
   "Payment Status",
   "Order Status",
   "Address",
@@ -48,6 +49,7 @@ export class AdminOrderService {
       (order.itemsTotal ?? order.totalAmount).toFixed(2),
       (order.deliveryFee ?? 0).toFixed(2),
       order.totalAmount.toFixed(2),
+      order.paymentMethod === "cod" ? "Cash on Delivery" : "Online (Razorpay)",
       order.paymentStatus,
       order.status,
       order.deliveryAddressSnapshot.addressLine,
@@ -72,9 +74,12 @@ export class AdminOrderService {
     // "cancelled" is a terminal state (no transitions out of it - see
     // orderStatus.ts), so this can only ever run once per order - no risk
     // of crediting stock back twice for the same cancellation. Only
-    // restores stock that was actually decremented, i.e. only if the order
-    // had been paid (unpaid orders never decremented anything).
-    if (status === "cancelled" && order.paymentStatus === "paid") {
+    // restores stock that was actually decremented: Razorpay orders
+    // decrement at payment-capture time (paymentStatus "paid"), while COD
+    // orders decrement immediately at creation regardless of paymentStatus
+    // (see OrderService.createOrder) - so both need to be covered here, not
+    // just the "paid" check alone.
+    if (status === "cancelled" && (order.paymentStatus === "paid" || order.paymentMethod === "cod")) {
       await Promise.all(order.items.map((item) => this.bookRepository.incrementStock(item.bookId, item.quantity)));
     }
 

@@ -58,6 +58,7 @@ export default async function ShopByCategory() {
           {cards.map((card) => (
             <CategoryCard
               key={card.id}
+              categoryId={card.id}
               name={card.name}
               count={card.count}
               coverImageUrl={card.coverImageUrl}

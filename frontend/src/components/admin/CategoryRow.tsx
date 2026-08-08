@@ -6,6 +6,7 @@ import Image from "next/image";
 import { updateCategoryAction, deleteCategoryAction } from "@/app/admin/categories/actions";
 import { Category } from "@/types/category";
 import { isOptimizableImageUrl } from "@/lib/isOptimizableImageUrl";
+import { useConfirm } from "@/components/ConfirmDialogProvider";
 
 export default function CategoryRow({ category }: { category: Category }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -15,6 +16,7 @@ export default function CategoryRow({ category }: { category: Category }) {
   const [isSaving, startSave] = useTransition();
   const [isDeleting, startDelete] = useTransition();
   const router = useRouter();
+  const confirm = useConfirm();
 
   function startEditing() {
     setName(category.name);
@@ -38,8 +40,14 @@ export default function CategoryRow({ category }: { category: Category }) {
     });
   }
 
-  function handleDelete() {
-    if (!window.confirm("Delete this category?")) return;
+  async function handleDelete() {
+    const confirmed = await confirm({
+      title: "Delete this category?",
+      message: `Delete "${category.name}"? This can't be undone.`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!confirmed) return;
     startDelete(async () => {
       await deleteCategoryAction(category.id);
       router.refresh();

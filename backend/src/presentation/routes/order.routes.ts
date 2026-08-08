@@ -20,6 +20,7 @@ export function buildOrderRouter(controller: OrderController): Router {
   );
   router.get("/me", asyncHandler(controller.listMyOrders));
   router.get("/:id", asyncHandler(controller.getById));
+  router.patch("/:id/cancel", asyncHandler(controller.cancelOrder));
 
   return router;
 }

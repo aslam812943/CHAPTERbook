@@ -1,8 +1,9 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/dal/session";
 import { apiClient, ApiError, withRefresh } from "@/lib/dal/apiClient";
-import { Order } from "@/types/order";
+import { Order, PaymentMethod } from "@/types/order";
 
 export interface AddressInput {
   fullName: string;
@@ -19,7 +20,11 @@ export interface CreateOrderResult {
   order?: Order;
 }
 
-export async function createOrderAction(address: AddressInput, saveAddress: boolean): Promise<CreateOrderResult> {
+export async function createOrderAction(
+  address: AddressInput,
+  saveAddress: boolean,
+  paymentMethod: PaymentMethod
+): Promise<CreateOrderResult> {
   await requireUser();
 
   try {
@@ -30,7 +35,7 @@ export async function createOrderAction(address: AddressInput, saveAddress: bool
     }
 
     const response = await withRefresh(() =>
-      apiClient.post<{ order: Order }>("/orders", { address }, { auth: true })
+      apiClient.post<{ order: Order }>("/orders", { address, paymentMethod }, { auth: true })
     );
     return { success: true, message: "", order: response.order };
   } catch (err) {
@@ -39,6 +44,28 @@ export async function createOrderAction(address: AddressInput, saveAddress: bool
     }
     return { success: false, message: "Failed to place order. Please try again." };
   }
+}
+
+export interface CancelOrderState {
+  success: boolean;
+  message: string;
+}
+
+export async function cancelOrderAction(orderId: string): Promise<CancelOrderState> {
+  await requireUser();
+
+  try {
+    await withRefresh(() => apiClient.patch(`/orders/${orderId}/cancel`, undefined, { auth: true }));
+  } catch (err) {
+    if (err instanceof ApiError) {
+      return { success: false, message: err.message };
+    }
+    return { success: false, message: "Failed to cancel the order. Please try again." };
+  }
+
+  revalidatePath("/account/orders");
+  revalidatePath(`/checkout/confirmation/${orderId}`);
+  return { success: true, message: "Order cancelled." };
 }
 
 export interface EstimateDeliveryState {

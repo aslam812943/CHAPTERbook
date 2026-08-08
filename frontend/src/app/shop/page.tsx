@@ -15,9 +15,9 @@ export const metadata: Metadata = {
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: Promise<{ author?: string; offer?: string }>;
+  searchParams: Promise<{ author?: string; offer?: string; category?: string }>;
 }) {
-  const { author: authorFilter, offer: offerFilter } = await searchParams;
+  const { author: authorFilter, offer: offerFilter, category: categoryFilter } = await searchParams;
 
   // Filtering/sorting happens client-side in LibraryShelf so it can animate
   // books sliding on/off the shelves - that needs the full catalog in the
@@ -60,6 +60,7 @@ export default async function ShopPage({
       authorInfo={authorInfo}
       offers={offers}
       offerFilter={offerFilter ?? null}
+      categoryFilter={categoryFilter ?? null}
     />
   );
 }

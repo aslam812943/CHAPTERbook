@@ -28,6 +28,11 @@ function toDomain(doc: OrderDocument): Order {
     status: doc.status,
     whatsappMessage: doc.whatsappMessage,
     paymentStatus: doc.paymentStatus,
+    // Orders created before this field existed have no value in the DB at
+    // all (not just a default) - the schema default only applies to new
+    // documents, not reads of old ones. Every one of those was Razorpay,
+    // since COD didn't exist yet.
+    paymentMethod: doc.paymentMethod ?? "razorpay",
     razorpayOrderId: doc.razorpayOrderId,
     razorpayPaymentId: doc.razorpayPaymentId,
     createdAt: doc.createdAt,

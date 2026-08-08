@@ -6,6 +6,7 @@ import Image from "next/image";
 import { updateAuthorAction, deleteAuthorAction } from "@/app/admin/authors/actions";
 import { Author } from "@/types/author";
 import { isOptimizableImageUrl } from "@/lib/isOptimizableImageUrl";
+import { useConfirm } from "@/components/ConfirmDialogProvider";
 
 export default function AuthorRow({ author }: { author: Author }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -15,6 +16,7 @@ export default function AuthorRow({ author }: { author: Author }) {
   const [isSaving, startSave] = useTransition();
   const [isDeleting, startDelete] = useTransition();
   const router = useRouter();
+  const confirm = useConfirm();
 
   function startEditing() {
     setName(author.name);
@@ -38,8 +40,14 @@ export default function AuthorRow({ author }: { author: Author }) {
     });
   }
 
-  function handleDelete() {
-    if (!window.confirm("Delete this author?")) return;
+  async function handleDelete() {
+    const confirmed = await confirm({
+      title: "Delete this author?",
+      message: `Delete "${author.name}"? This can't be undone.`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!confirmed) return;
     startDelete(async () => {
       await deleteAuthorAction(author.id);
       router.refresh();

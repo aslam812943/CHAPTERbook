@@ -3,6 +3,7 @@
 import { useActionState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateStockAction, deleteBookAction, StockFormState } from "@/app/admin/books/actions";
+import { useConfirm } from "@/components/ConfirmDialogProvider";
 
 const initialState: StockFormState = { success: false, message: "" };
 
@@ -10,9 +11,16 @@ export default function BookRowActions({ bookId, stock }: { bookId: string; stoc
   const [state, formAction] = useActionState(updateStockAction, initialState);
   const [isDeleting, startDelete] = useTransition();
   const router = useRouter();
+  const confirm = useConfirm();
 
-  function handleDelete() {
-    if (!window.confirm("Remove this book from the catalog?")) return;
+  async function handleDelete() {
+    const confirmed = await confirm({
+      title: "Remove this book?",
+      message: "Remove this book from the catalog? This can't be undone.",
+      confirmLabel: "Remove",
+      danger: true,
+    });
+    if (!confirmed) return;
     startDelete(async () => {
       await deleteBookAction(bookId);
       router.refresh();

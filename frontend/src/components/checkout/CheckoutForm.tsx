@@ -11,6 +11,7 @@ import {
 } from "@/app/checkout/actions";
 import { Address } from "@/types/user";
 import { CartView } from "@/types/cart";
+import { PaymentMethod } from "@/types/order";
 import Toast from "@/components/Toast";
 import { useToast } from "@/hooks/useToast";
 
@@ -56,6 +57,7 @@ export default function CheckoutForm({ cart, savedAddress }: { cart: CartView; s
   const [postalCode, setPostalCode] = useState(savedAddress?.postalCode ?? "");
   const [country, setCountry] = useState(savedAddress?.country ?? "");
   const [saveAddress, setSaveAddress] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("razorpay");
 
   const [estimate, setEstimate] = useState<{ distanceKm: number; deliveryFee: number } | null>(null);
 
@@ -111,7 +113,9 @@ export default function CheckoutForm({ cart, savedAddress }: { cart: CartView; s
       return;
     }
 
-    if (!scriptReady || typeof window.Razorpay === "undefined") {
+    // Only Razorpay needs its checkout script ready - COD never opens a
+    // payment modal at all, so there's nothing to wait for.
+    if (paymentMethod === "razorpay" && (!scriptReady || typeof window.Razorpay === "undefined")) {
       showToast("Payment is still loading, try again in a moment.", false);
       return;
     }
@@ -119,12 +123,19 @@ export default function CheckoutForm({ cart, savedAddress }: { cart: CartView; s
     if (isPaymentModalOpen) return;
 
     startTransition(async () => {
-      const created = await createOrderAction(address, saveAddress);
+      const created = await createOrderAction(address, saveAddress, paymentMethod);
       if (!created.success || !created.order) {
         showToast(created.message || "Failed to place order. Please try again.", false);
         return;
       }
       const order = created.order;
+
+      // COD is already fully placed the moment the order exists - no
+      // payment step to start, straight to the confirmation page.
+      if (paymentMethod === "cod") {
+        router.push(`/checkout/confirmation/${order.id}`);
+        return;
+      }
 
       const payment = await createPaymentOrderAction(order.id);
       if (!payment.success || !payment.razorpayOrderId || !payment.keyId) {
@@ -270,8 +281,44 @@ export default function CheckoutForm({ cart, savedAddress }: { cart: CartView; s
               Save this address to my account
             </label>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label
+                  className={`flex items-center gap-3 border rounded-md py-3 px-4 cursor-pointer transition-colors ${
+                    paymentMethod === "razorpay" ? "border-accent ring-1 ring-accent/60" : "border-gray-300"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    checked={paymentMethod === "razorpay"}
+                    onChange={() => setPaymentMethod("razorpay")}
+                    className="accent-accent"
+                  />
+                  <span className="text-sm text-ink">Pay Online</span>
+                </label>
+                <label
+                  className={`flex items-center gap-3 border rounded-md py-3 px-4 cursor-pointer transition-colors ${
+                    paymentMethod === "cod" ? "border-accent ring-1 ring-accent/60" : "border-gray-300"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    checked={paymentMethod === "cod"}
+                    onChange={() => setPaymentMethod("cod")}
+                    className="accent-accent"
+                  />
+                  <span className="text-sm text-ink">Cash on Delivery</span>
+                </label>
+              </div>
+            </div>
+
             <p className="text-xs text-gray-500">
-              Placing your order saves these details, then opens a secure payment screen to complete your purchase.
+              {paymentMethod === "cod"
+                ? "Pay in cash when your order arrives. You can cancel a Cash on Delivery order anytime before it ships."
+                : "Placing your order saves these details, then opens a secure payment screen to complete your purchase."}
             </p>
 
             <button
@@ -279,7 +326,11 @@ export default function CheckoutForm({ cart, savedAddress }: { cart: CartView; s
               disabled={isPending || isPaymentModalOpen}
               className="w-full bg-accent text-[#111] font-semibold py-4 rounded-md hover:brightness-110 transition-all disabled:opacity-60"
             >
-              {isPending || isPaymentModalOpen ? "Processing..." : "Proceed to Payment"}
+              {isPending || isPaymentModalOpen
+                ? "Processing..."
+                : paymentMethod === "cod"
+                  ? "Place Order"
+                  : "Proceed to Payment"}
             </button>
           </form>
         </div>

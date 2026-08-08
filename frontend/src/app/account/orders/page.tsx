@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/dal/session";
 import { apiClient } from "@/lib/dal/apiClient";
 import { Order } from "@/types/order";
+import OrderCancelOrChat from "@/components/account/OrderCancelOrChat";
 
 export const metadata: Metadata = {
   title: "Order History",
@@ -72,7 +73,10 @@ export default async function OrderHistoryPage() {
                     </p>
                   ))}
                 </div>
-                <p className="text-accent font-semibold">₹{order.totalAmount.toFixed(2)}</p>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-accent font-semibold">₹{order.totalAmount.toFixed(2)}</p>
+                  <OrderCancelOrChat order={order} />
+                </div>
               </div>
             ))}
           </div>

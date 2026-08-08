@@ -1,5 +1,5 @@
 import { Schema, model, Document, Types } from "mongoose";
-import { OrderStatus, PaymentStatus } from "../../../domain/entities/Order";
+import { OrderStatus, PaymentStatus, PaymentMethod } from "../../../domain/entities/Order";
 import { AddressSubdocument } from "./User.model";
 
 export interface OrderItemSubdocument {
@@ -21,6 +21,7 @@ export interface OrderDocument extends Document<Types.ObjectId> {
   status: OrderStatus;
   whatsappMessage: string;
   paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod;
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
   createdAt: Date;
@@ -71,6 +72,15 @@ const orderSchema = new Schema<OrderDocument>(
       type: String,
       enum: ["unpaid", "paid", "failed"],
       default: "unpaid",
+    },
+    // Every order before this feature shipped was implicitly Razorpay - see
+    // MongoOrderRepository.toDomain's `?? "razorpay"` fallback, since this
+    // schema default only applies to newly-created documents, not reads of
+    // existing ones.
+    paymentMethod: {
+      type: String,
+      enum: ["razorpay", "cod"],
+      default: "razorpay",
     },
     // Looked up on every Razorpay webhook delivery and payment verification
     // call (findByRazorpayOrderId) - a hot path on the payment flow.

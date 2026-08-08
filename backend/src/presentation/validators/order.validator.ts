@@ -10,6 +10,7 @@ export const createOrderSchema = z.object({
       postalCode: z.string().trim().max(20).optional(),
       country: z.string().trim().min(1, "Country is required").max(100),
     }),
+    paymentMethod: z.enum(["razorpay", "cod"]),
   }),
 });
 

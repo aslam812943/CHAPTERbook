@@ -80,7 +80,7 @@ function buildContainer() {
   const wishlistService = new WishlistService(wishlistRepository, bookRepository, offerRepository);
   const reviewService = new ReviewService(reviewRepository, bookRepository, userRepository);
   const bookRequestService = new BookRequestService(bookRequestRepository, userRepository, bookRepository);
-  const orderService = new OrderService(orderRepository, cartRepository, cartService);
+  const orderService = new OrderService(orderRepository, cartRepository, cartService, bookRepository);
   const adminOrderService = new AdminOrderService(orderRepository, bookRepository);
   const paymentService = new PaymentService(orderRepository, bookRepository);
   const categoryService = new CategoryService(categoryRepository);

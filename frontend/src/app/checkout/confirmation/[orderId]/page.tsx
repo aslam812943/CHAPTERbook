@@ -28,16 +28,22 @@ export default async function OrderConfirmationPage({
     <div className="min-h-screen bg-paper text-ink py-24 px-4 sm:px-8">
       <div className="max-w-2xl mx-auto text-center">
         <h1 className="text-4xl font-serif italic mb-3">
-          {order.paymentStatus === "paid" ? "Payment Received" : "Order Placed"}
+          {order.paymentMethod === "cod"
+            ? "Order Placed"
+            : order.paymentStatus === "paid"
+              ? "Payment Received"
+              : "Order Placed"}
         </h1>
         <p className="text-gray-600 mb-2">Reference: {order.orderRef}</p>
         <p className="text-gray-600">
-          {order.paymentStatus === "paid"
-            ? "Thank you! We'll get your order ready for delivery."
-            : "Complete your payment below to confirm your order."}
+          {order.paymentMethod === "cod"
+            ? "Thank you! Pay in cash when your order arrives."
+            : order.paymentStatus === "paid"
+              ? "Thank you! We'll get your order ready for delivery."
+              : "Complete your payment below to confirm your order."}
         </p>
 
-        {order.paymentStatus !== "paid" && (
+        {order.paymentMethod === "razorpay" && order.paymentStatus !== "paid" && (
           <div className="mt-8 max-w-xs mx-auto">
             <RazorpayPayButton
               orderId={order.id}

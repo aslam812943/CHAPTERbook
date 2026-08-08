@@ -2,6 +2,7 @@ import { Address } from "./user";
 
 export type OrderStatus = "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
 export type PaymentStatus = "unpaid" | "paid" | "failed";
+export type PaymentMethod = "razorpay" | "cod";
 
 export interface OrderItem {
   bookId: string;
@@ -23,6 +24,7 @@ export interface Order {
   status: OrderStatus;
   whatsappMessage: string;
   paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod;
   createdAt: string;
   updatedAt: string;
 }
