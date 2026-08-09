@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
-import { addToCartAction, buyNowAction, AddToCartFormState } from "@/app/books/[id]/actions";
+import { addToCartAction, buyNowAction, AddToCartFormState } from "@/app/books/[slug]/actions";
 import Toast from "@/components/Toast";
 import { useToast } from "@/hooks/useToast";
 

@@ -3,6 +3,7 @@ export type BookSource = "google" | "openlibrary" | "manual";
 export interface Book {
   id: string;
   title: string;
+  slug: string;
   authors: string[];
   description: string;
   isbn10?: string;

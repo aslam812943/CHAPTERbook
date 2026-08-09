@@ -49,6 +49,7 @@ export class WishlistService {
       const { effectiveDiscountPercentage, effectiveFinalPrice } = computeEffectivePricing(book, activeOffers);
       items.push({
         bookId: wishlist.bookIds[i],
+        slug: book.slug,
         title: book.title,
         price: effectiveFinalPrice,
         originalPrice: book.price,

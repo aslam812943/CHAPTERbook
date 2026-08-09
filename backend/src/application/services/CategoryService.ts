@@ -1,14 +1,7 @@
 import { ICategoryRepository } from "../../domain/repositories/ICategoryRepository";
 import { Category, UpdateCategoryInput } from "../../domain/entities/Category";
 import { ConflictError, NotFoundError } from "../../shared/errors/AppError";
-
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
+import { slugify } from "../../shared/utils/slugify";
 
 export class CategoryService {
   constructor(private readonly categoryRepository: ICategoryRepository) {}

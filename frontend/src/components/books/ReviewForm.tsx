@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
-import { submitReviewAction, ReviewActionState } from "@/app/books/[id]/actions";
+import { submitReviewAction, ReviewActionState } from "@/app/books/[slug]/actions";
 import StarIcon from "./StarIcon";
 
 const initialState: ReviewActionState = { success: false, message: "" };
@@ -23,11 +23,12 @@ function SubmitButton() {
 
 interface ReviewFormProps {
   bookId: string;
+  bookSlug: string;
   bookTitle: string;
   blockedReason: "login" | "duplicate" | null;
 }
 
-export default function ReviewForm({ bookId, bookTitle, blockedReason }: ReviewFormProps) {
+export default function ReviewForm({ bookId, bookSlug, bookTitle, blockedReason }: ReviewFormProps) {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [formError, setFormError] = useState("");
@@ -52,6 +53,7 @@ export default function ReviewForm({ bookId, bookTitle, blockedReason }: ReviewF
 
       <form action={formAction} onSubmit={handleSubmit} className="space-y-5">
         <input type="hidden" name="bookId" value={bookId} />
+        <input type="hidden" name="bookSlug" value={bookSlug} />
         <input type="hidden" name="rating" value={rating} />
 
         <div>

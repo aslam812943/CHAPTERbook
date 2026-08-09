@@ -22,7 +22,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const { items } = await apiClient.get<PaginatedResult<Book>>("/books?limit=100");
     bookRoutes = items.map((book) => ({
-      url: `${SITE_URL}/books/${book.id}`,
+      url: `${SITE_URL}/books/${book.slug}`,
       lastModified: book.updatedAt,
       changeFrequency: "weekly",
       priority: 0.7,

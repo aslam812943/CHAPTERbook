@@ -14,6 +14,11 @@ export class BookController {
     res.json({ book });
   };
 
+  getBySlug = async (req: Request, res: Response): Promise<void> => {
+    const book = await this.bookService.getBySlug(req.params.slug);
+    res.json({ book });
+  };
+
   list = async (req: Request, res: Response): Promise<void> => {
     const { search, categoryId, language, page, limit } = req.query as unknown as {
       search?: string;

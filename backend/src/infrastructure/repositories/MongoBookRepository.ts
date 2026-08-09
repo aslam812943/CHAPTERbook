@@ -14,6 +14,7 @@ function toDomain(doc: BookDocument): Book {
   return {
     id: doc._id.toString(),
     title: doc.title,
+    slug: doc.slug,
     authors: doc.authors,
     description: doc.description,
     isbn10: doc.isbn10,
@@ -47,6 +48,11 @@ export class MongoBookRepository implements IBookRepository {
 
   async findById(id: string): Promise<Book | null> {
     const doc = await BookModel.findById(id).lean<BookDocument>();
+    return doc ? toDomain(doc) : null;
+  }
+
+  async findBySlug(slug: string): Promise<Book | null> {
+    const doc = await BookModel.findOne({ slug }).lean<BookDocument>();
     return doc ? toDomain(doc) : null;
   }
 

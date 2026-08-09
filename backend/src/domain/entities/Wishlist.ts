@@ -7,6 +7,7 @@ export interface Wishlist {
 
 export interface WishlistItemView {
   bookId: string;
+  slug: string;
   title: string;
   price: number;
   originalPrice: number;

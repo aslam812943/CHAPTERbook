@@ -3,6 +3,7 @@ import { BookSource } from "../../../domain/entities/Book";
 
 export interface BookDocument extends Document<Types.ObjectId> {
   title: string;
+  slug: string;
   authors: string[];
   description: string;
   isbn10?: string;
@@ -26,6 +27,12 @@ export interface BookDocument extends Document<Types.ObjectId> {
 const bookSchema = new Schema<BookDocument>(
   {
     title: { type: String, required: true, trim: true },
+    // sparse (not just unique): existing books get backfilled a slug via a
+    // one-time migration, but sparse means the index won't choke on the
+    // brief window before that runs where multiple documents still have no
+    // slug at all (a plain unique index treats missing values as
+    // colliding nulls).
+    slug: { type: String, required: true, unique: true, sparse: true, lowercase: true, trim: true },
     authors: { type: [String], default: [] },
     description: { type: String, default: "" },
     isbn10: { type: String },

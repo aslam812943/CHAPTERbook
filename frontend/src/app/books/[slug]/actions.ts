@@ -62,6 +62,7 @@ export async function submitReviewAction(
   await requireUser();
 
   const bookId = String(formData.get("bookId") ?? "");
+  const bookSlug = String(formData.get("bookSlug") ?? "");
   const rating = Number(formData.get("rating") ?? 0);
   const title = String(formData.get("title") ?? "");
   const body = String(formData.get("body") ?? "");
@@ -75,6 +76,9 @@ export async function submitReviewAction(
     return { success: false, message: "Failed to submit review. Please try again." };
   }
 
-  revalidatePath(`/books/${bookId}`);
+  // Reviews are still submitted keyed by the real bookId (the API doesn't
+  // know about slugs), but the page that needs revalidating lives at the
+  // slug URL now, not the id.
+  revalidatePath(`/books/${bookSlug}`);
   return { success: true, message: "Thanks! Your review has been submitted." };
 }

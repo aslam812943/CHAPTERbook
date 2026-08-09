@@ -1,14 +1,7 @@
 import { IAuthorRepository } from "../../domain/repositories/IAuthorRepository";
 import { Author, UpdateAuthorInput } from "../../domain/entities/Author";
 import { ConflictError, NotFoundError } from "../../shared/errors/AppError";
-
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
+import { slugify } from "../../shared/utils/slugify";
 
 export class AuthorService {
   constructor(private readonly authorRepository: IAuthorRepository) {}

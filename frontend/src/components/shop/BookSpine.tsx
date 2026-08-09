@@ -42,7 +42,7 @@ export default function BookSpine({ book }: BookSpineProps) {
 
   return (
     <MotionLink
-      href={`/books/${book.id}`}
+      href={`/books/${book.slug}`}
       layout
       initial={{ opacity: 0, scale: 0.85 }}
       animate={{ opacity: 1, scale: 1 }}

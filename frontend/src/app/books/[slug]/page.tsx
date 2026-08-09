@@ -1,9 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import { apiClient, ApiError } from "@/lib/dal/apiClient";
-import { getSession, SessionPayload } from "@/lib/dal/session";
+import { getSession } from "@/lib/dal/session";
 import { Book, PaginatedResult } from "@/types/book";
 import { WishlistView } from "@/types/wishlist";
 import { ReviewSummary } from "@/types/review";
@@ -16,15 +16,15 @@ import PriceDisplay from "@/components/PriceDisplay";
 import ShelfRow from "@/components/shop/ShelfRow";
 import { isOptimizableImageUrl } from "@/lib/isOptimizableImageUrl";
 
-// Pre-renders the known book IDs at build time; any book added afterward
+// Pre-renders the known book slugs at build time; any book added afterward
 // still works fine (dynamicParams defaults to true - it's just rendered
 // on-demand on first visit instead of pre-built). Falls back to an empty
 // list rather than failing the build if the Render backend is asleep or
 // unreachable at build time.
-export async function generateStaticParams(): Promise<{ id: string }[]> {
+export async function generateStaticParams(): Promise<{ slug: string }[]> {
   try {
     const { items } = await apiClient.get<PaginatedResult<Book>>("/books?limit=100");
-    return items.map((book) => ({ id: book.id }));
+    return items.map((book) => ({ slug: book.slug }));
   } catch {
     return [];
   }
@@ -35,18 +35,36 @@ function truncate(text: string, maxLength: number): string {
   return `${text.slice(0, maxLength - 1).trimEnd()}…`;
 }
 
+// The route segment is named [slug], but links from before slugs existed
+// (an old bookmark, a search result Google hasn't recrawled yet, the
+// fulfilled-book-request notification email/link, which still embeds the
+// raw id) can still arrive here with a Mongo ObjectId instead. Try the
+// real slug lookup first; only fall back to the legacy id-based endpoint
+// if that 404s, so the common case stays a single request.
+async function resolveBook(slugOrId: string): Promise<{ book: Book; isLegacyId: boolean }> {
+  try {
+    const { book } = await apiClient.get<{ book: Book }>(`/books/slug/${slugOrId}`, { revalidate: 300 });
+    return { book, isLegacyId: false };
+  } catch (err) {
+    if (!(err instanceof ApiError && err.status === 404)) throw err;
+  }
+
+  const { book } = await apiClient.get<{ book: Book }>(`/books/${slugOrId}`, { revalidate: 300 });
+  return { book, isLegacyId: true };
+}
+
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const { id } = await params;
+  const { slug } = await params;
 
   try {
-    // Same URL + revalidate window as the page component's own fetch below,
-    // so Next dedupes this into the same single request rather than
+    // Same lookup + revalidate window as the page component's own fetch
+    // below, so Next dedupes this into a single request rather than
     // fetching the book twice.
-    const { book } = await apiClient.get<{ book: Book }>(`/books/${id}`, { revalidate: 300 });
+    const { book } = await resolveBook(slug);
     const authors = book.authors.join(", ") || "Unknown author";
     const description = book.description
       ? truncate(book.description, 155)
@@ -68,26 +86,33 @@ export async function generateMetadata({
   }
 }
 
-export default async function BookDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function BookDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
 
   let book: Book;
-  let session: SessionPayload | null;
   try {
-    // session is just a cookie read (no network call), but resolving it
-    // alongside the book fetch costs nothing and avoids it being yet
-    // another link in an otherwise fully sequential chain of round-trips
-    // to a backend that might be waking up from a cold start.
-    [book, session] = await Promise.all([
-      apiClient.get<{ book: Book }>(`/books/${id}`, { revalidate: 300 }).then((r) => r.book),
-      getSession(),
-    ]);
+    const resolved = await resolveBook(slug);
+    if (resolved.isLegacyId) {
+      // 308 (not a 307) - tells search engines and browsers this is a
+      // permanent move, so link equity/bookmarks transfer to the new URL
+      // instead of the old one lingering as "the real" address.
+      permanentRedirect(`/books/${resolved.book.slug}`);
+    }
+    book = resolved.book;
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) {
       notFound();
     }
     throw err;
   }
+
+  // Kept as its own plain await, not folded into the Promise.all below -
+  // cookies() is a request-scoped API, and racing it concurrently with a
+  // fetch() inside Promise.all worked locally but 500'd in Vercel's
+  // production serverless runtime for every single book page. It's just an
+  // in-memory read of already-parsed request headers (no network round
+  // trip), so sequencing it costs nothing worth fighting that bug for.
+  const session = await getSession();
 
   // None of these three depend on each other - only on `book`/`session`,
   // already resolved above - so they run in parallel instead of one after
@@ -119,9 +144,11 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
   // would otherwise let a crafted description/title break out of the
   // script tag - < keeps the JSON valid while never rendering a
   // literal "<" into the HTML.
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const productJsonLd = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "Product",
+    url: `${siteUrl}/books/${book.slug}`,
     name: book.title,
     image: book.coverImageUrl ? [book.coverImageUrl] : undefined,
     description: book.description || undefined,
@@ -237,7 +264,12 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
 
         <div className="mt-16 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-8 items-start">
           <ReviewSummaryCard summary={summary} />
-          <ReviewForm bookId={book.id} bookTitle={book.title} blockedReason={reviewBlockedReason} />
+          <ReviewForm
+            bookId={book.id}
+            bookSlug={book.slug}
+            bookTitle={book.title}
+            blockedReason={reviewBlockedReason}
+          />
         </div>
 
         {summary.reviews.length > 0 && (

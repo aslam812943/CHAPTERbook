@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { removeFromWishlistAction } from "@/app/wishlist/actions";
-import { addToCartAction } from "@/app/books/[id]/actions";
+import { addToCartAction } from "@/app/books/[slug]/actions";
 import { WishlistItemView } from "@/types/wishlist";
 import { isOptimizableImageUrl } from "@/lib/isOptimizableImageUrl";
 
@@ -33,7 +33,7 @@ export default function WishlistItemRow({ item }: { item: WishlistItemView }) {
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 py-5 border-b border-gray-200 last:border-0">
-      <Link href={`/books/${item.bookId}`} className="flex items-center gap-4 sm:flex-1 sm:min-w-0">
+      <Link href={`/books/${item.slug}`} className="flex items-center gap-4 sm:flex-1 sm:min-w-0">
         <div className="relative w-14 h-20 bg-gray-100 rounded overflow-hidden flex-shrink-0">
           {item.coverImageUrl && (
             <Image

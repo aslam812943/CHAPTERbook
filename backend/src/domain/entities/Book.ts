@@ -5,6 +5,7 @@ export type { Pagination, PaginatedResult } from "./common";
 export interface Book {
   id: string;
   title: string;
+  slug: string;
   authors: string[];
   description: string;
   isbn10?: string;
@@ -35,6 +36,8 @@ export interface Book {
 
 export interface CreateBookInput {
   title: string;
+  /** Computed by BookService from title (with a -2, -3... suffix on collision) - not client-supplied. */
+  slug?: string;
   authors: string[];
   description: string;
   isbn10?: string;
