@@ -16,6 +16,13 @@ import PriceDisplay from "@/components/PriceDisplay";
 import ShelfRow from "@/components/shop/ShelfRow";
 import { isOptimizableImageUrl } from "@/lib/isOptimizableImageUrl";
 
+// Gives the wishlist/reviews/related-books Promise.all below (which runs
+// after a real backend response, not just the fast-fail timeout above) room
+// to finish even against a slow-but-not-sleeping backend, without racing
+// Vercel's own 10s default function limit (see apiClient.ts's
+// REQUEST_TIMEOUT_MS for the fast-fail side of this same trade-off).
+export const maxDuration = 20;
+
 // Pre-renders the known book slugs at build time; any book added afterward
 // still works fine (dynamicParams defaults to true - it's just rendered
 // on-demand on first visit instead of pre-built). Falls back to an empty

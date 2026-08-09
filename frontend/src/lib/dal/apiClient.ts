@@ -25,7 +25,14 @@ interface RequestOptions {
 // cap, a sleeping backend hangs the request (and the page render) until the
 // platform's own upstream timeout kills it with an opaque error. Callers
 // that need a fallback UI should catch ApiError/DOMException("TimeoutError").
-const REQUEST_TIMEOUT_MS = 10_000;
+//
+// Kept well under Vercel's default 10s function duration (Hobby plan) on
+// purpose: if this matched or exceeded it, Vercel's own platform-level kill
+// switch could fire at the same time as (or before) this abort, killing the
+// function before app/error.tsx ever gets a chance to render its fallback -
+// the user would see Vercel's raw generic crash page instead. This margin is
+// what lets our own error boundary reliably win that race.
+const REQUEST_TIMEOUT_MS = 7_000;
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
