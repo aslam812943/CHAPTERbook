@@ -23,19 +23,7 @@ import { isOptimizableImageUrl } from "@/lib/isOptimizableImageUrl";
 // REQUEST_TIMEOUT_MS for the fast-fail side of this same trade-off).
 export const maxDuration = 20;
 
-// Pre-renders the known book slugs at build time; any book added afterward
-// still works fine (dynamicParams defaults to true - it's just rendered
-// on-demand on first visit instead of pre-built). Falls back to an empty
-// list rather than failing the build if the Render backend is asleep or
-// unreachable at build time.
-export async function generateStaticParams(): Promise<{ slug: string }[]> {
-  try {
-    const { items } = await apiClient.get<PaginatedResult<Book>>("/books?limit=100");
-    return items.map((book) => ({ slug: book.slug }));
-  } catch {
-    return [];
-  }
-}
+
 
 function truncate(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
