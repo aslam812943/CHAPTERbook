@@ -73,6 +73,7 @@ export default function AuthorCarouselRow({ authors }: { authors: Author[] }) {
                   className="object-cover"
                   sizes="(max-width: 640px) 96px, 112px"
                   unoptimized={!isOptimizableImageUrl(author.imageUrl)}
+                  loading="eager"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-2xl font-serif italic text-gray-300">

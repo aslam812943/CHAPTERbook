@@ -173,7 +173,34 @@ function HeroWelcomeContent() {
   );
 }
 
-export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
+import React from 'react';
+
+class CanvasErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode; fallback: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(_: Error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('CanvasSequence Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <>{this.props.fallback}</>;
+    }
+    return this.props.children;
+  }
+}
+
+function CanvasSequenceInner({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -181,20 +208,9 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
   // Safety net for a genuinely stalled/broken load - not tied to any
   // accessibility preference, just "the load gave up."
   const [loadTimedOut, setLoadTimedOut] = useState(false);
-  // Read synchronously on first render instead of defaulting to false and
-  // correcting in an effect - otherwise a phone briefly starts the desktop
-  // (unskipped, full-resolution) frame load before the mobile branch takes
-  // over a moment later, wasting bandwidth on a load that gets cancelled.
-  const [isMobile, setIsMobile] = useState(() => getInitialMatch('(max-width: 768px)'));
-  // Unlike isMobile above, this can't be read synchronously in the
-  // initializer: it decides which top-level tree gets rendered (static hero
-  // vs. the animated sequence), and the server has no way to know a
-  // visitor's OS motion preference. Reading it synchronously here would
-  // make the client's first render disagree with the server-rendered HTML
-  // whenever a visitor has reduced-motion enabled - a real hydration
-  // mismatch, not just a wasted-bandwidth edge case. Starting at `false`
-  // keeps the client's initial render identical to the server's; the
-  // effect below corrects it immediately after mount.
+  // Default to false for SSR to prevent hydration mismatch
+  const [isMobile, setIsMobile] = useState(false);
+  // Starts at false for SSR consistency
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [showEndText, setShowEndText] = useState(false);
   const frameSet = isMobile ? FRAME_SETS.mobile : FRAME_SETS.desktop;
@@ -242,16 +258,11 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
   }, [loadTimedOut, skipToStatic, isMobile, setHeroDark]);
 
   useEffect(() => {
-    // isMobile's initial value already comes from its lazy useState
-    // initializer above - this listener only needs to react to later
-    // changes (e.g. rotating a tablet across the breakpoint).
     const mobileQuery = window.matchMedia('(max-width: 768px)');
+    setIsMobile(mobileQuery.matches);
     const mobileListener = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     mobileQuery.addEventListener('change', mobileListener);
 
-    // prefersReducedMotion, unlike isMobile, starts at a hardcoded `false`
-    // (see the state declaration above) - this reads the real value once on
-    // mount, in addition to listening for later OS-setting changes.
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     setPrefersReducedMotion(motionQuery.matches);
     const motionListener = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
@@ -627,5 +638,28 @@ export default function CanvasSequence({ isLoggedIn = false }: { isLoggedIn?: bo
       )}
       {showEndText && <HeroWelcomeContent />}
     </div>
+  );
+}
+
+export default function CanvasSequence(props: { isLoggedIn?: boolean }) {
+  return (
+    <CanvasErrorBoundary
+      fallback={
+        <div className="w-full h-dvh relative flex items-center justify-center bg-[#F4F3EE]">
+          <Image
+            src="/heroo.png"
+            alt="Library"
+            fill
+            priority
+            quality={100}
+            style={{ objectFit: 'cover' }}
+          />
+          <div className="absolute inset-0 bg-black/40" />
+          <HeroWelcomeContent />
+        </div>
+      }
+    >
+      <CanvasSequenceInner {...props} />
+    </CanvasErrorBoundary>
   );
 }

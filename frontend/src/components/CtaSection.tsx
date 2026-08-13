@@ -37,6 +37,7 @@ export default function CtaSection() {
         fill
         className="object-cover object-center z-0"
         quality={100}
+        loading="eager"
       />
       <div className="absolute inset-0 bg-black/40 z-0"></div>
 

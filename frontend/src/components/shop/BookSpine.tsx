@@ -61,6 +61,7 @@ export default function BookSpine({ book }: BookSpineProps) {
             className="object-cover"
             sizes="(max-width: 640px) 170px, (max-width: 768px) 190px, 210px"
             unoptimized={!isOptimizableImageUrl(book.coverImageUrl)}
+            loading="eager"
           />
         ) : (
           <div className={`w-full h-full ${tone} spine-fallback flex flex-col items-center justify-center p-3`}>

@@ -32,6 +32,7 @@ export default function CategoryCard({ categoryId, name, count, coverImageUrl, c
             className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
             sizes="(max-width: 640px) 128px, (max-width: 768px) 33vw, 16vw"
             unoptimized={!isOptimizableImageUrl(coverImageUrl)}
+            loading="eager"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-3xl font-serif italic text-gray-300">
