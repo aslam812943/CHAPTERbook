@@ -11,6 +11,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "seed:admin": "tsx src/scripts/seedAdmin.ts",
+    "seed:fiction": "tsx src/scripts/seedFictionBooks.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

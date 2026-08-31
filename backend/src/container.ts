@@ -57,7 +57,7 @@ import { buildOfferRouter } from "./presentation/routes/offer.routes";
 // controllers, and controllers into routers. Services only ever depend on
 // repository interfaces (domain/repositories/*) - this is the single place
 // concrete Mongo implementations get bound to those interfaces.
-function buildContainer() {
+export function buildContainer() {
   const userRepository = new MongoUserRepository();
   const bookRepository = new MongoBookRepository();
   const cartRepository = new MongoCartRepository();
